@@ -1,0 +1,22 @@
+{
+  "name": "@bwms/zk",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "create-package": "tsx scripts/create-proof-package.ts",
+    "verify-package": "tsx scripts/verify-proof-package.ts"
+  },
+  "dependencies": {
+    "@bwms/telemetry": "workspace:*",
+    "snarkjs": "^0.7.6"
+  },
+  "devDependencies": {
+    "@types/node": "^26.5.0",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
