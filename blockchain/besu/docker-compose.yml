@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  node1:
+    image: hyperledger/besu:24.1.0
+    container_name: bwms-besu-node1
+    environment:
+      - BESU_LOGGING=INFO
+    volumes:
+      - ./genesis.json:/etc/besu/genesis.json
+    command:
+      - --config-file=/etc/besu/genesis.json
+      - --network-id=1337
+      - --rpc-http-enabled=true
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8545
+      - --rpc-http-api=ETH,NET,QBFT,WEB3
+      - --rpc-http-cors-origins=*
+      - --host-allowlist=*
+    ports:
+      - "8545:8545"
+
+  node2:
+    image: hyperledger/besu:24.1.0
+    container_name: bwms-besu-node2
+    volumes:
+      - ./genesis.json:/etc/besu/genesis.json
+    command:
+      - --config-file=/etc/besu/genesis.json
+      - --network-id=1337
+      - --rpc-http-enabled=true
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8546
+      - --rpc-http-api=ETH,NET,QBFT,WEB3
+      - --rpc-http-cors-origins=*
+      - --host-allowlist=*
+    ports:
+      - "8546:8546"
+
+  node3:
+    image: hyperledger/besu:24.1.0
+    container_name: bwms-besu-node3
+    volumes:
+      - ./genesis.json:/etc/besu/genesis.json
+    command:
+      - --config-file=/etc/besu/genesis.json
+      - --network-id=1337
+      - --rpc-http-enabled=true
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8547
+      - --rpc-http-api=ETH,NET,QBFT,WEB3
+      - --rpc-http-cors-origins=*
+      - --host-allowlist=*
+    ports:
+      - "8547:8547"
+
+  node4:
+    image: hyperledger/besu:24.1.0
+    container_name: bwms-besu-node4
+    volumes:
+      - ./genesis.json:/etc/besu/genesis.json
+    command:
+      - --config-file=/etc/besu/genesis.json
+      - --network-id=1337
+      - --rpc-http-enabled=true
+      - --rpc-http-host=0.0.0.0
+      - --rpc-http-port=8548
+      - --rpc-http-api=ETH,NET,QBFT,WEB3
+      - --rpc-http-cors-origins=*
+      - --host-allowlist=*
+    ports:
+      - "8548:8548"

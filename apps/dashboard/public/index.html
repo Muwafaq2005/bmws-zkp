@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BWMS ZKP — Zero-Knowledge Compliance Verification System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top Header -->
+    <header class="navbar glass">
+      <div class="brand">
+        <div class="logo-icon">🛡️</div>
+        <div>
+          <h1>BWMS ZKP Compliance Verification</h1>
+          <p class="subtitle">Privacy-Preserving Telemetry Commitment & Remote Verification Platform</p>
+        </div>
+      </div>
+      <div class="system-status">
+        <div class="status-indicator online">
+          <span class="dot"></span> Ship Node: Active
+        </div>
+        <div class="status-indicator online">
+          <span class="dot"></span> VSAT Link: Active
+        </div>
+        <div class="status-indicator online">
+          <span class="dot"></span> Verifier: Ready
+        </div>
+        <div class="status-indicator online">
+          <span class="dot"></span> Besu EVM: Connected
+        </div>
+      </div>
+    </header>
+
+    <!-- Important Regulatory Disclaimer Banner -->
+    <div class="disclaimer-banner glass">
+      <div class="disclaimer-icon">⚠️</div>
+      <div class="disclaimer-content">
+        <strong>CRYPTOGRAPHIC PROTOTYPE NOTICE</strong>
+        <p>This application demonstrates zero-knowledge cryptographic compliance verification against the prototype predicate (<code>flow_rate &ge; 800, uv &ge; 40, 20 &le; temp &le; 30, 25 &le; sal &le; 35, turb &le; 5</code>). <em>These thresholds represent demonstration rules and MUST NOT be presented as a complete or authoritative IMO D-2 biological compliance certification.</em></p>
+      </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <main class="grid-layout">
+      <!-- Control Panel -->
+      <section class="panel glass control-panel">
+        <h2>⚡ Interactive Pipeline Controller</h2>
+        
+        <div class="control-group">
+          <label>Simulation Mode</label>
+          <div class="button-row">
+            <button id="btn-run-valid" class="btn btn-primary">
+              <span class="icon">▶</span> Run Valid Telemetry Pipeline
+            </button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label for="attack-select">Adversarial Security Hardening Test</label>
+          <div class="attack-row">
+            <select id="attack-select" class="select-input">
+              <option value="proof_mutation">Proof Mutation (Corrupted groth16 pi_a)</option>
+              <option value="root_mutation">Merkle Root Mutation (Data tampering)</option>
+              <option value="unsupported_ruleset">Rule-Set Mismatch (BWMS-RELAXED-V0)</option>
+              <option value="stale_package">Stale Package Replay Attack (&gt;24h old)</option>
+              <option value="replay">Duplicate Attestation Replay Attack</option>
+            </select>
+            <button id="btn-run-attack" class="btn btn-danger">
+              <span class="icon">⚔️</span> Test Attack Rejection
+            </button>
+          </div>
+        </div>
+
+        <div class="control-group">
+          <label>VSAT Satellite Channel Configuration</label>
+          <div class="input-grid">
+            <div>
+              <span class="input-label">Bandwidth (kbps)</span>
+              <select id="cfg-bandwidth" class="select-input small">
+                <option value="256">256 kbps (Constrained VSAT)</option>
+                <option value="512" selected>512 kbps (Standard Maritime)</option>
+                <option value="1024">1024 kbps (High Throughput)</option>
+              </select>
+            </div>
+            <div>
+              <span class="input-label">Round-Trip Latency (ms)</span>
+              <select id="cfg-latency" class="select-input small">
+                <option value="400">400 ms (LEO Satellite)</option>
+                <option value="650" selected>650 ms (GEO Satellite)</option>
+                <option value="1000">1000 ms (Congested GEO)</option>
+              </select>
+            </div>
+            <div>
+              <span class="input-label">Packet Loss Rate (%)</span>
+              <select id="cfg-loss" class="select-input small">
+                <option value="0.0">0.0% (Clean Link)</option>
+                <option value="2.0" selected>2.0% (Standard Link)</option>
+                <option value="8.0">8.0% (Storm / Lossy Link)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pipeline Visualization Flow -->
+      <section class="panel glass pipeline-panel">
+        <h2>🔄 Cryptographic Verification Pipeline Flow</h2>
+        <div class="pipeline-flow">
+          <div class="flow-step" id="step-telemetry">
+            <div class="step-icon">📡</div>
+            <div class="step-name">1. BWMS Telemetry</div>
+            <div class="step-desc">64 V1 Records</div>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step" id="step-merkle">
+            <div class="step-icon">🌳</div>
+            <div class="step-name">2. Poseidon Tree</div>
+            <div class="step-desc">Merkle Root</div>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step" id="step-zkp">
+            <div class="step-icon">🔐</div>
+            <div class="step-name">3. Groth16 Proof</div>
+            <div class="step-desc">BN254 Witness</div>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step" id="step-vsat">
+            <div class="step-icon">🛰️</div>
+            <div class="step-name">4. VSAT Channel</div>
+            <div class="step-desc">Zero Raw Data</div>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step" id="step-verifier">
+            <div class="step-icon">⚖️</div>
+            <div class="step-name">5. Remote Verifier</div>
+            <div class="step-desc">Format & Proof</div>
+          </div>
+          <div class="flow-arrow">➔</div>
+          <div class="flow-step" id="step-blockchain">
+            <div class="step-icon">⛓️</div>
+            <div class="step-name">6. Besu Attestation</div>
+            <div class="step-desc">On-Chain Record</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Verification Status Result Card -->
+      <section class="panel glass result-panel">
+        <h2>📋 Verification Record & Status</h2>
+        <div class="status-badge-container">
+          <div id="status-badge" class="badge badge-idle">SYSTEM READY</div>
+          <div id="attack-tag" class="attack-tag hidden"></div>
+        </div>
+
+        <div class="details-grid">
+          <div class="detail-card">
+            <span class="detail-label">Operation ID</span>
+            <span id="res-op-id" class="detail-value mono">--</span>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Window ID</span>
+            <span id="res-win-id" class="detail-value mono">--</span>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Rule-Set Identifier</span>
+            <span id="res-rule-set" class="detail-value mono">BWMS-DEMO-V1</span>
+          </div>
+          <div class="detail-card">
+            <span class="detail-label">Verification Timestamp</span>
+            <span id="res-timestamp" class="detail-value">--</span>
+          </div>
+          <div class="detail-card full-width">
+            <span class="detail-label">Poseidon Merkle Root Commitment</span>
+            <span id="res-merkle-root" class="detail-value mono break-all">--</span>
+          </div>
+          <div class="detail-card full-width">
+            <span class="detail-label">On-Chain Attestation Tx Hash</span>
+            <span id="res-tx-hash" class="detail-value mono break-all">--</span>
+          </div>
+          <div id="reason-card" class="detail-card full-width danger-card hidden">
+            <span class="detail-label">Rejection Reason / Threat Vector</span>
+            <span id="res-reason" class="detail-value">--</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- VSAT Communication Simulator Metrics -->
+      <section class="panel glass metrics-panel">
+        <h2>📊 VSAT Bandwidth & Communication Metrics</h2>
+        
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-title">Raw Telemetry Size</div>
+            <div id="metric-raw-size" class="metric-value">-- KB</div>
+            <div class="metric-sub">64 JSON Records</div>
+          </div>
+          <div class="metric-card highlight">
+            <div class="metric-title">Verification Package Size</div>
+            <div id="metric-zk-size" class="metric-value">-- KB</div>
+            <div class="metric-sub">Zero Raw Data Transmitted</div>
+          </div>
+          <div class="metric-card accent">
+            <div class="metric-title">Bandwidth Savings</div>
+            <div id="metric-savings" class="metric-value">--%</div>
+            <div class="metric-sub">Payload Reduction Ratio</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-title">Transmission Speedup</div>
+            <div id="metric-speedup" class="metric-value">--x</div>
+            <div class="metric-sub">Latency Savings</div>
+          </div>
+        </div>
+
+        <div class="comparison-bar-container">
+          <div class="bar-label">
+            <span>Payload Size Comparison</span>
+            <span id="bar-summary">--</span>
+          </div>
+          <div class="bar-track">
+            <div id="bar-raw" class="bar-fill raw" style="width: 100%;">Raw Telemetry</div>
+            <div id="bar-zk" class="bar-fill zk" style="width: 15%;">ZK Package</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>BWMS ZKP Project — Privacy-Preserving Compliance Verification Architecture</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,13 +1,10 @@
 {
-  "name": "bwms-zkp",
+  "name": "@bwms/dashboard",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.26.0",
   "type": "module",
   "scripts": {
-    "test": "pnpm -r test",
-    "benchmark": "tsx scripts/benchmark.ts",
-    "dashboard": "pnpm --filter @bwms/dashboard start"
+    "start": "node server.js"
   },
   "dependencies": {
     "@bwms/compliance": "workspace:*",
@@ -16,11 +13,11 @@
     "@bwms/telemetry": "workspace:*",
     "@bwms/verifier-app": "workspace:*",
     "@bwms/vsat-simulator": "workspace:*",
-    "@bwms/zk": "workspace:*"
+    "@bwms/zk": "workspace:*",
+    "express": "^4.21.2"
   },
   "devDependencies": {
-    "@types/node": "^26.5.0",
-    "tsx": "^4.23.13",
-    "typescript": "^7.0.2"
+    "@types/express": "^5.0.0",
+    "@types/node": "^26.5.0"
   }
 }

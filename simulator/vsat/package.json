@@ -1,5 +1,5 @@
 {
-  "name": "@bwms/zk",
+  "name": "@bwms/vsat-simulator",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -13,13 +13,11 @@
   },
   "scripts": {
     "build": "tsc",
-    "test": "vitest run",
-    "create-package": "tsx scripts/create-proof-package.ts",
-    "verify-package": "tsx scripts/verify-proof-package.ts"
+    "test": "vitest run"
   },
   "dependencies": {
     "@bwms/telemetry": "workspace:*",
-    "snarkjs": "^0.7.6"
+    "@bwms/zk": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^26.5.0",

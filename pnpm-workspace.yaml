@@ -4,5 +4,7 @@ packages:
   - "blockchain"
   - "simulator/*"
 allowBuilds:
+  keccak: true
+  secp256k1: true
   blake-hash: false
   esbuild: false

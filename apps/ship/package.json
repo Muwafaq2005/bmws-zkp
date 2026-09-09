@@ -1,20 +1,18 @@
 {
-  "name": "bwms-zkp",
+  "name": "@bwms/ship-app",
   "version": "0.1.0",
   "private": true,
-  "packageManager": "pnpm@11.26.0",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "pnpm -r test",
-    "benchmark": "tsx scripts/benchmark.ts",
-    "dashboard": "pnpm --filter @bwms/dashboard start"
+    "build": "tsc",
+    "start": "tsx src/ship-app.ts"
   },
   "dependencies": {
     "@bwms/compliance": "workspace:*",
     "@bwms/merkle": "workspace:*",
-    "@bwms/ship-app": "workspace:*",
     "@bwms/telemetry": "workspace:*",
-    "@bwms/verifier-app": "workspace:*",
     "@bwms/vsat-simulator": "workspace:*",
     "@bwms/zk": "workspace:*"
   },

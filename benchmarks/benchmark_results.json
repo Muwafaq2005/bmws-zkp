@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-09-09T18:55:46.914Z",
+  "circuitMetrics": {
+    "circuitName": "telemetry_merkle_root.circom",
+    "system": "Groth16",
+    "curve": "BN254",
+    "field": "BN254 Scalar Field",
+    "publicInputsCount": 1,
+    "publicInputName": "publicRoot",
+    "recordsCount": 64,
+    "r1csConstraints": 68420
+  },
+  "performanceTimingMs": {
+    "telemetryGeneration": 0.4,
+    "merkleTreeComputation": 283.96,
+    "meanProofVerification": 14.81,
+    "totalPipelineExecution": 582.94
+  },
+  "payloadSizeComparison": {
+    "rawTelemetryBytes": 14238,
+    "verificationPackageBytes": 1102,
+    "byteSavingsPercent": 92.26,
+    "speedupFactor": 1.32
+  },
+  "vsatSimulation": {
+    "config": {
+      "bandwidthKbps": 512,
+      "roundTripLatencyMs": 650,
+      "packetLossPercent": 2
+    },
+    "rawTelemetryMetrics": {
+      "label": "Raw Telemetry Window (64 Records)",
+      "rawPayloadBytes": 14238,
+      "wirePayloadBytes": 14678,
+      "packetsSent": 11,
+      "retransmissions": 0,
+      "propagationLatencyMs": 650,
+      "transferTimeMs": 229,
+      "totalLatencyMs": 879,
+      "effectiveThroughputKbps": 129.58
+    },
+    "verificationPackageMetrics": {
+      "label": "ZK Verification Package",
+      "rawPayloadBytes": 1102,
+      "wirePayloadBytes": 1142,
+      "packetsSent": 1,
+      "retransmissions": 0,
+      "propagationLatencyMs": 650,
+      "transferTimeMs": 18,
+      "totalLatencyMs": 668,
+      "effectiveThroughputKbps": 13.2
+    },
+    "byteReductionRatio": 0.9226,
+    "byteSavingsPercent": 92.26,
+    "latencySavingsMs": 211,
+    "speedupFactor": 1.32
+  },
+  "systemHardware": {
+    "cpuModel": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
+    "cpuCores": 16,
+    "totalMemoryMb": 15159,
+    "freeMemoryMb": 5150
+  }
+}

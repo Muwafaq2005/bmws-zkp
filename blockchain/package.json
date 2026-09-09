@@ -1,0 +1,22 @@
+{
+  "name": "@bwms/blockchain",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "hardhat compile",
+    "test": "hardhat test",
+    "node": "hardhat node",
+    "deploy:local": "hardhat run scripts/deploy.ts --network localhost"
+  },
+  "dependencies": {
+    "ethers": "^6.13.5"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@types/node": "^26.5.0",
+    "hardhat": "^2.22.18",
+    "typescript": "^7.0.2"
+  }
+}
