@@ -3,6 +3,7 @@ pragma circom 2.2.0;
 include "telemetry_leaf.circom";
 include "merkle.circom";
 include "completeness.circom";
+include "compliance.circom";
 
 template TelemetryMerkleRoot64() {
     signal input telemetry[64][10];
@@ -14,11 +15,19 @@ template TelemetryMerkleRoot64() {
 
     component completeness = Completeness64();
 
+    component compliance = Compliance64();
+
     for (var i = 0; i < 64; i++) {
         completeness.operationIds[i] <== telemetry[i][0];
         completeness.windowIds[i] <== telemetry[i][1];
         completeness.sequences[i] <== telemetry[i][2];
         completeness.timestamps[i] <== telemetry[i][3];
+
+        compliance.flowRate[i] <== telemetry[i][5];
+        compliance.uvIntensity[i] <== telemetry[i][6];
+        compliance.temperature[i] <== telemetry[i][7];
+        compliance.salinity[i] <== telemetry[i][8];
+        compliance.turbidity[i] <== telemetry[i][9];
     }
 
     for (var i = 0; i < 64; i++) {

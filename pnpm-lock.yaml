@@ -209,6 +209,9 @@ importers:
 
   packages/compliance:
     dependencies:
+      '@bwms/merkle':
+        specifier: workspace:*
+        version: link:../merkle
       '@bwms/telemetry':
         specifier: workspace:*
         version: link:../telemetry
