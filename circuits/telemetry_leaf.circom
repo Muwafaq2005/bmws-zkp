@@ -31,5 +31,3 @@ template TelemetryLeaf() {
 
     leafHash <== poseidon.out;
 }
-
-component main = TelemetryLeaf();
