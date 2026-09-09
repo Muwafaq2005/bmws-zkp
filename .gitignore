@@ -2,3 +2,10 @@ node_modules/
 dist/
 .DS_Store
 *.log
+
+# Circom generated artifacts
+*.r1cs
+*.sym
+*_js/
+*_witness.json
+*_witness.wtns

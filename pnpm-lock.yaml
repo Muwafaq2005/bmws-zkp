@@ -229,6 +229,9 @@ importers:
         specifier: ^0.1.7
         version: 0.1.7
     devDependencies:
+      circomlib:
+        specifier: ^2.0.5
+        version: 2.0.5
       tsx:
         specifier: ^4.23.13
         version: 4.23.13
@@ -800,6 +803,9 @@ packages:
   chai@6.2.2:
     resolution: {integrity: sha512-NUPRluOfOiTKBKvWPtSD4PhFvWCqOi0BGStNWs57X9js7XGTprSmFoz5F0tWhR4WPjNeR9jXqdC7/UpSJTnlRg==}
     engines: {node: '>=18'}
+
+  circomlib@2.0.5:
+    resolution: {integrity: sha512-O7NQ8OS+J4eshBuoy36z/TwQU0YHw8W3zxZcs4hVwpEll3e4hDm3mgkIPqItN8FDeLEKZFK3YeT/+k8TiLF3/A==}
 
   circomlibjs@0.1.7:
     resolution: {integrity: sha512-GRAUoAlKAsiiTa+PA725G9RmEmJJRc8tRFxw/zKktUxlQISGznT4hH4ESvW8FNTsrGg/nNd06sGP/Wlx0LUHVg==}
@@ -1652,6 +1658,8 @@ snapshots:
   brorand@1.1.0: {}
 
   chai@6.2.2: {}
+
+  circomlib@2.0.5: {}
 
   circomlibjs@0.1.7:
     dependencies:
