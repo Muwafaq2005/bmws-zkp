@@ -9,3 +9,6 @@ dist/
 *_js/
 *_witness.json
 *_witness.wtns
+
+# Generated build artifacts
+build/
