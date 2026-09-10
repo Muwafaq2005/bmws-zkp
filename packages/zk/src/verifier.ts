@@ -11,6 +11,7 @@ export interface VerificationResult {
   valid: boolean;
   reason?: string;
   attackVector?: string;
+  mitigationType?: "Groth16 Cryptographic Verification" | "Application-Level Package Policy" | "Application Freshness Threshold" | "Blockchain Duplicate Protection";
 }
 
 const SUPPORTED_VERSION = 1;
@@ -30,6 +31,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Invalid payload format: expected a JSON object.",
       attackVector: "Malformed JSON / Invalid Structure",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -41,6 +43,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: `Unsupported package version: expected ${SUPPORTED_VERSION}, got ${String(p.version)}.`,
       attackVector: "Unsupported Version",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -50,6 +53,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: `Unsupported circuit ID: expected ${SUPPORTED_CIRCUIT_ID}, got ${String(p.circuit_id)}.`,
       attackVector: "Unsupported Circuit ID",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -57,8 +61,9 @@ export function validateVerificationPackageFormat(
   if (p.rule_set_id !== SUPPORTED_RULE_SET_ID) {
     return {
       valid: false,
-      reason: `Unsupported rule-set ID: expected ${SUPPORTED_RULE_SET_ID}, got ${String(p.rule_set_id)}.`,
-      attackVector: "Unsupported Rule-Set ID",
+      reason: `Unsupported rule-set ID: expected ${SUPPORTED_RULE_SET_ID}, got ${String(p.rule_set_id)}. Note: rule_set_id is metadata verified at application layer, not a public ZKP input in V1.`,
+      attackVector: "Unsupported Rule-Set ID (Application Metadata)",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -71,8 +76,9 @@ export function validateVerificationPackageFormat(
   ) {
     return {
       valid: false,
-      reason: "Missing or invalid operation_id / window_id metadata.",
+      reason: "Missing or invalid operation_id / window_id metadata. Note: metadata fields are verified at application layer, not public ZKP inputs in V1.",
       attackVector: "Metadata Mutation / Missing Metadata",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -82,6 +88,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Missing or invalid merkle_root in verification package.",
       attackVector: "Root Mutation / Missing Root",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -89,8 +96,9 @@ export function validateVerificationPackageFormat(
   if (!Array.isArray(p.public_inputs) || p.public_inputs.length !== 1) {
     return {
       valid: false,
-      reason: `Expected exactly 1 public input; received ${Array.isArray(p.public_inputs) ? p.public_inputs.length : "non-array"}.`,
+      reason: `Expected exactly 1 public input (publicRoot); received ${Array.isArray(p.public_inputs) ? p.public_inputs.length : "non-array"}.`,
       attackVector: "Proof / Public-Input Mismatch",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -100,6 +108,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: `Public input [0] (${String(p.public_inputs[0])}) does not match merkle_root (${String(p.merkle_root)}).`,
       attackVector: "Root Mutation / Public-Input Tampering",
+      mitigationType: "Groth16 Cryptographic Verification",
     };
   }
 
@@ -109,6 +118,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Missing or invalid proof object.",
       attackVector: "Proof Mutation / Missing Proof",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -125,6 +135,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Proof structure missing required curve points (pi_a, pi_b, pi_c).",
       attackVector: "Proof Mutation / Malformed Curve Points",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -134,6 +145,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Missing generated_at timestamp.",
       attackVector: "Metadata Mutation / Missing Timestamp",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -143,6 +155,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: "Invalid ISO timestamp in generated_at.",
       attackVector: "Metadata Mutation / Invalid Timestamp",
+      mitigationType: "Application-Level Package Policy",
     };
   }
 
@@ -153,6 +166,7 @@ export function validateVerificationPackageFormat(
         valid: false,
         reason: `Package is stale: generated at ${p.generated_at}, age exceeds ${options.maxAgeMs} ms threshold.`,
         attackVector: "Stale Package",
+        mitigationType: "Application Freshness Threshold",
       };
     }
   }
@@ -164,6 +178,7 @@ export function validateVerificationPackageFormat(
       valid: false,
       reason: `Duplicate attestation detected for ${attestationId}. Package has already been processed.`,
       attackVector: "Replay / Duplicate Attestation",
+      mitigationType: "Blockchain Duplicate Protection",
     };
   }
 
@@ -195,8 +210,9 @@ export async function verifyVerificationPackage(
     if (!isValidProof) {
       return {
         valid: false,
-        reason: "Cryptographic proof verification failed (snarkjs groth16 verify returned false).",
+        reason: "Groth16 proof verification failed (snarkjs groth16 verify returned false).",
         attackVector: "Proof Mutation / Invalid Zero-Knowledge Proof",
+        mitigationType: "Groth16 Cryptographic Verification",
       };
     }
 
@@ -209,8 +225,9 @@ export async function verifyVerificationPackage(
   } catch (error) {
     return {
       valid: false,
-      reason: `Cryptographic proof verification error: ${error instanceof Error ? error.message : String(error)}`,
+      reason: `Groth16 proof verification error: ${error instanceof Error ? error.message : String(error)}`,
       attackVector: "Proof Mutation / Malformed Proof",
+      mitigationType: "Groth16 Cryptographic Verification",
     };
   }
 }

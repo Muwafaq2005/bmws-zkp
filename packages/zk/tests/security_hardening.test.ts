@@ -56,7 +56,7 @@ describe("Phase 1 Security Hardening Test Suite", () => {
     const tampered = { ...validPackage, rule_set_id: "BWMS-RELAXED-RULES-V0" };
     const result = validateVerificationPackageFormat(tampered);
     expect(result.valid).toBe(false);
-    expect(result.attackVector).toBe("Unsupported Rule-Set ID");
+    expect(result.attackVector).toContain("Unsupported Rule-Set ID");
   });
 
   it("6. Metadata Mutation Attack: Operation ID or Window ID manipulation must be rejected", () => {
