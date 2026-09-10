@@ -7,9 +7,7 @@
 [![Hyperledger Besu](https://img.shields.io/badge/Hyperledger%20Besu-QBFT%20Consensus-1B67B2?style=flat-square)](https://www.hyperledger.org/projects/besu)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 
-An end-to-end prototype demonstrating **privacy-preserving compliance verification** of Ballast Water Management System (BWMS) operational telemetry using zero-knowledge proofs (ZKP).
-
-The central innovation allows a ship-side system to commit to an ordered 64-record treatment window and generate a zero-knowledge proof that all operational constraints are satisfied **without transmitting raw telemetry to the remote verifier or recording private sensor data on a public/permissioned blockchain**.
+An end-to-end prototype demonstrating **privacy-preserving verification of a complete, ordered, cryptographically committed BWMS telemetry window without transmitting the underlying telemetry to the remote verifier**.
 
 ---
 
@@ -36,11 +34,33 @@ $$\text{ValidWindow}(\text{telemetry}) \;\land\; \text{MerkleRoot}(\text{telemet
 
 ### Key Technical Specifications
 - **Zero-Knowledge Stack**: Circom 2.2.3, SnarkJS 0.7.6, Groth16 Proving System over BN254 / BN128 curve.
+- **Circuit Complexity**: **158,647 R1CS constraints** (159 template instances, 78,092 nonlinear constraints, 80,555 linear constraints, 640 private inputs, 1 public input).
 - **Commitment Scheme**: 64-leaf binary Merkle tree using Poseidon hash functions (`Poseidon(10)` for telemetry leaves, `Poseidon(2)` for internal nodes). Left/right leaf ordering is preserved without unordered pair sorting.
 - **Numeric Encoding**: Fixed-point scale 10 ($1\text{ unit} = 0.1$). Floating-point values are converted off-chain prior to canonical field element hashing.
 - **Public Inputs**: Single public input (`publicRoot`). Telemetry remains 100% private witness data.
 - **Prototype Predicate (`BWMS-DEMO-V1`)**:
   $$\text{flow\_rate} \ge 800 \;\land\; \text{uv\_intensity} \ge 40 \;\land\; 20 \le \text{temperature} \le 30 \;\land\; 25 \le \text{salinity} \le 35 \;\land\; \text{turbidity} \le 5$$
+
+---
+
+## 🛡️ Security Threat Model & Attack Matrix
+
+The verification engine distinguishes Groth16 cryptographic proof verification from application-level package policy enforcement:
+
+| Attack Vector | Expected Result | Technical Protection Mechanism & Layer |
+| :--- | :--- | :--- |
+| **Proof mutation** | REJECT | Groth16 cryptographic verification (`snarkjs.groth16.verify`) |
+| **Public root mutation** | REJECT | Proof / public input binding (`publicInputs[0] === merkle_root`) |
+| **Public input mutation** | REJECT | Groth16 cryptographic verification |
+| **Telemetry mutation before proof generation** | Different commitment / proof | Poseidon Merkle commitment tree |
+| **Sequence gap** | REJECT | Completeness circuit constraints (`sequence == i + 1`) |
+| **Duplicate sequence** | REJECT | Completeness circuit constraints |
+| **Reordered records** | REJECT | Ordered Poseidon tree commitment + completeness constraints |
+| **Timestamp violation** | REJECT | Completeness circuit strictly increasing timestamp constraints |
+| **Non-compliant telemetry** | REJECT | Compliance circuit predicate bounds |
+| **Operation / window metadata tampering** | REJECT | Application-level package validation policy (*Not a separate ZKP public input in V1*) |
+| **Rule-set metadata tampering** | REJECT | Application-level package validation policy (*Not a separate ZKP public input in V1*) |
+| **Replay of a valid package** | REJECT | Application freshness policy (`maxAgeMs`) + Blockchain duplicate attestation protection |
 
 ---
 
@@ -142,23 +162,24 @@ Open **`http://localhost:3000`** in your browser.
 
 ### Features
 - **Live Pipeline Visualizer**: Trace telemetry generation $\rightarrow$ Merkle root $\rightarrow$ Groth16 proof $\rightarrow$ VSAT transmission $\rightarrow$ Remote verification $\rightarrow$ Besu blockchain attestation.
+- **Separate Verification Badges**: Distinct statuses for `ZKP VERIFIED` (Groth16) vs `CONFIRMED` (Blockchain Attestation).
+- **Expandable Package Inspector**: Collapsible JSON inspector showing actual payload fields and explicitly confirming: `Raw Telemetry Transmitted: 0 records`.
 - **Interactive Security Attack Simulation**: Test instant rejection of proof mutations, data tampering, stale packages, and rule-set mismatches.
-- **VSAT Link Controls**: Dynamically configure bandwidth (256/512/1024 kbps), round-trip latency (400/650/1000 ms), and packet loss (0%/2%/8%).
-- **On-Chain Audit Explorer**: Displays contract attestation transaction hashes and block numbers.
 
 ---
 
 ## 📊 Empirical Benchmarking Results
 
-Captured via `pnpm benchmark` on an 8-core CPU system:
+Captured via `pnpm benchmark` (Reproducible Measured Results):
 
-| Metric | Raw Telemetry Transmission | ZK Verification Package | Performance Gain / Delta |
+| Metric | Raw Telemetry Transmission | ZK Verification Package | Performance Gain / Measured Delta |
 | :--- | :--- | :--- | :--- |
-| **Payload Size** | **14,238 bytes** (~14.2 KB) | **1,102 bytes** (~1.1 KB) | **92.26% Bandwidth Reduction** |
+| **Payload Size (Uncompressed)** | **14,238 bytes** (~14.2 KB) | **1,102 bytes** (~1.1 KB) | **92.26% Bandwidth Reduction** |
+| **Payload Size (Gzip Compressed)** | 887 bytes | 640 bytes | **27.85% Compression Savings** |
 | **Packets Sent (512 kbps VSAT)** | 11 TCP Segments | 1 TCP Segment | **90.9% Fewer Packets** |
-| **Transmission Latency** | 879 ms | 668 ms | **211 ms Faster (1.32x Speedup)** |
-| **Mean Proof Verification** | N/A | **15.56 ms** | Instant Verification |
-| **R1CS Constraints** | N/A | **68,420 Constraints** | 64-Leaf Poseidon Tree |
+| **Transmission Latency (650 ms GEO)** | 879 ms | 668 ms | **211 ms Faster (1.32x Speedup)** |
+| **Mean Proof Verification** | N/A | **31.55 ms** | Instant Verification |
+| **R1CS Constraints** | N/A | **158,647 Constraints** | 64-Leaf Poseidon Tree |
 | **On-Chain Storage** | Raw Telemetry Excluded | Root + Proof Hash Only | **Privacy Preserved** |
 
 ---

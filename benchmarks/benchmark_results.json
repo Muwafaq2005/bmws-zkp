@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-09T18:55:46.914Z",
+  "timestamp": "2026-09-10T09:13:39.745Z",
   "circuitMetrics": {
     "circuitName": "telemetry_merkle_root.circom",
     "system": "Groth16",
@@ -7,19 +7,26 @@
     "field": "BN254 Scalar Field",
     "publicInputsCount": 1,
     "publicInputName": "publicRoot",
+    "privateInputsCount": 640,
     "recordsCount": 64,
-    "r1csConstraints": 68420
+    "r1csConstraints": 158647,
+    "nonlinearConstraints": 78092,
+    "linearConstraints": 80555,
+    "templateInstances": 159
   },
   "performanceTimingMs": {
-    "telemetryGeneration": 0.4,
-    "merkleTreeComputation": 283.96,
-    "meanProofVerification": 14.81,
-    "totalPipelineExecution": 582.94
+    "telemetryGeneration": 1.36,
+    "merkleTreeComputation": 776.18,
+    "meanProofVerification": 31.55,
+    "totalPipelineExecution": 1414.81
   },
   "payloadSizeComparison": {
     "rawTelemetryBytes": 14238,
+    "rawCompressedBytes": 887,
     "verificationPackageBytes": 1102,
+    "zkCompressedBytes": 640,
     "byteSavingsPercent": 92.26,
+    "compressedByteSavingsPercent": 27.85,
     "speedupFactor": 1.32
   },
   "vsatSimulation": {
@@ -31,6 +38,7 @@
     "rawTelemetryMetrics": {
       "label": "Raw Telemetry Window (64 Records)",
       "rawPayloadBytes": 14238,
+      "compressedPayloadBytes": 887,
       "wirePayloadBytes": 14678,
       "packetsSent": 11,
       "retransmissions": 0,
@@ -42,6 +50,7 @@
     "verificationPackageMetrics": {
       "label": "ZK Verification Package",
       "rawPayloadBytes": 1102,
+      "compressedPayloadBytes": 640,
       "wirePayloadBytes": 1142,
       "packetsSent": 1,
       "retransmissions": 0,
@@ -52,6 +61,7 @@
     },
     "byteReductionRatio": 0.9226,
     "byteSavingsPercent": 92.26,
+    "compressedByteSavingsPercent": 27.85,
     "latencySavingsMs": 211,
     "speedupFactor": 1.32
   },
@@ -59,6 +69,6 @@
     "cpuModel": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
     "cpuCores": 16,
     "totalMemoryMb": 15159,
-    "freeMemoryMb": 5150
+    "freeMemoryMb": 7549
   }
 }

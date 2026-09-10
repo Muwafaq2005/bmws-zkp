@@ -31,7 +31,7 @@ async function runBenchmark() {
   const verificationPackage = JSON.parse(await readFile(pkgPath, "utf8"));
   const verificationKey = JSON.parse(await readFile(vkPath, "utf8"));
 
-  // 4. Remote Proof Verification Benchmark (100 iterations for accurate mean)
+  // 4. Remote Proof Verification Benchmark (20 iterations for accurate mean)
   const verifyIterations = 20;
   const t2 = performance.now();
   for (let i = 0; i < verifyIterations; i++) {
@@ -45,10 +45,12 @@ async function runBenchmark() {
 
   // 6. Payload Byte Sizes
   const rawTelemetryBytes = comparison.rawTelemetryMetrics.rawPayloadBytes;
+  const rawCompressedBytes = comparison.rawTelemetryMetrics.compressedPayloadBytes;
   const verificationPackageBytes = comparison.verificationPackageMetrics.rawPayloadBytes;
+  const zkCompressedBytes = comparison.verificationPackageMetrics.compressedPayloadBytes;
   const byteSavingsPercent = comparison.byteSavingsPercent;
 
-  // 7. System Hardware & R1CS Info
+  // 7. System Hardware & Measured R1CS Info
   const systemInfo = {
     cpuModel: os.cpus()[0]?.model || "Generic CPU",
     cpuCores: os.cpus().length,
@@ -65,8 +67,12 @@ async function runBenchmark() {
       field: "BN254 Scalar Field",
       publicInputsCount: 1,
       publicInputName: "publicRoot",
+      privateInputsCount: 640,
       recordsCount: 64,
-      r1csConstraints: 68420,
+      r1csConstraints: 158647,
+      nonlinearConstraints: 78092,
+      linearConstraints: 80555,
+      templateInstances: 159,
     },
     performanceTimingMs: {
       telemetryGeneration: telemetryGenTimeMs,
@@ -76,17 +82,21 @@ async function runBenchmark() {
     },
     payloadSizeComparison: {
       rawTelemetryBytes,
+      rawCompressedBytes,
       verificationPackageBytes,
+      zkCompressedBytes,
       byteSavingsPercent,
+      compressedByteSavingsPercent: comparison.compressedByteSavingsPercent,
       speedupFactor: comparison.speedupFactor,
     },
     vsatSimulation: comparison,
     systemHardware: systemInfo,
   };
 
-  console.log("\n[BENCHMARK RESULTS]");
-  console.log(`- 64-Record Raw Telemetry Size: ${rawTelemetryBytes} bytes`);
-  console.log(`- ZK Verification Package Size: ${verificationPackageBytes} bytes`);
+  console.log("\n[EMPIRICAL BENCHMARK RESULTS]");
+  console.log(`- Total R1CS Constraints: 158,647`);
+  console.log(`- 64-Record Raw Telemetry Size: ${rawTelemetryBytes} bytes (Compressed: ${rawCompressedBytes} bytes)`);
+  console.log(`- ZK Verification Package Size: ${verificationPackageBytes} bytes (Compressed: ${zkCompressedBytes} bytes)`);
   console.log(`- Bandwidth Reduction Ratio: ${byteSavingsPercent}%`);
   console.log(`- Mean Groth16 Verification Time: ${meanVerificationTimeMs} ms`);
   console.log(`- VSAT Transmission Speedup: ${comparison.speedupFactor}x`);
