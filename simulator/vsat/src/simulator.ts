@@ -1,3 +1,5 @@
+import zlib from "node:zlib";
+
 export interface VSATLinkConfig {
   bandwidthKbps: number; // Transmission channel speed in Kilobits per second (e.g. 512)
   roundTripLatencyMs: number; // Round-trip propagation delay in milliseconds (e.g. 600)
@@ -9,6 +11,7 @@ export interface VSATLinkConfig {
 export interface TransmissionMetrics {
   label: string;
   rawPayloadBytes: number;
+  compressedPayloadBytes: number;
   wirePayloadBytes: number;
   packetsSent: number;
   retransmissions: number;
@@ -22,10 +25,11 @@ export interface ComparisonResult {
   config: VSATLinkConfig;
   rawTelemetryMetrics: TransmissionMetrics;
   verificationPackageMetrics: TransmissionMetrics;
-  byteReductionRatio: number; // e.g. 0.85 means verification package is 85% smaller
-  byteSavingsPercent: number; // e.g. 85.4%
+  byteReductionRatio: number; // Dynamic byte reduction: 1 - (zkPackageBytes / rawBytes)
+  byteSavingsPercent: number; // e.g. 92.26%
+  compressedByteSavingsPercent: number; // Compression savings ratio
   latencySavingsMs: number;
-  speedupFactor: number; // e.g. 6.8x faster transmission
+  speedupFactor: number; // Dynamic speedup ratio
 }
 
 const DEFAULT_MSS = 1380;
@@ -48,6 +52,8 @@ export function simulateVSATTransmission(
       : JSON.stringify(payload);
 
   const rawPayloadBytes = Buffer.byteLength(payloadString, "utf8");
+  const compressedPayloadBytes = zlib.gzipSync(Buffer.from(payloadString, "utf8")).length;
+
   const mss = config.maxSegmentSizeBytes ?? DEFAULT_MSS;
   const headerBytes = config.headerOverheadBytesPerPacket ?? DEFAULT_HEADER_OVERHEAD;
 
@@ -84,6 +90,7 @@ export function simulateVSATTransmission(
   return {
     label,
     rawPayloadBytes,
+    compressedPayloadBytes,
     wirePayloadBytes,
     packetsSent: totalPackets,
     retransmissions,
@@ -105,12 +112,20 @@ export function compareVSATTransmission(
   const rawMetrics = simulateVSATTransmission("Raw Telemetry Window (64 Records)", rawTelemetry, config, 42);
   const zkMetrics = simulateVSATTransmission("ZK Verification Package", verificationPackage, config, 42);
 
+  // Dynamic bandwidth savings: 1 - (zkPackageBytes / rawBytes)
   const byteReductionRatio =
     rawMetrics.rawPayloadBytes > 0
-      ? Number(((rawMetrics.rawPayloadBytes - zkMetrics.rawPayloadBytes) / rawMetrics.rawPayloadBytes).toFixed(4))
+      ? Number((1 - zkMetrics.rawPayloadBytes / rawMetrics.rawPayloadBytes).toFixed(4))
       : 0;
 
   const byteSavingsPercent = Number((byteReductionRatio * 100).toFixed(2));
+
+  const compressedByteReductionRatio =
+    rawMetrics.compressedPayloadBytes > 0
+      ? Number((1 - zkMetrics.compressedPayloadBytes / rawMetrics.compressedPayloadBytes).toFixed(4))
+      : 0;
+  const compressedByteSavingsPercent = Number((compressedByteReductionRatio * 100).toFixed(2));
+
   const latencySavingsMs = rawMetrics.totalLatencyMs - zkMetrics.totalLatencyMs;
   const speedupFactor =
     zkMetrics.totalLatencyMs > 0 ? Number((rawMetrics.totalLatencyMs / zkMetrics.totalLatencyMs).toFixed(2)) : 1;
@@ -121,6 +136,7 @@ export function compareVSATTransmission(
     verificationPackageMetrics: zkMetrics,
     byteReductionRatio,
     byteSavingsPercent,
+    compressedByteSavingsPercent,
     latencySavingsMs,
     speedupFactor,
   };
