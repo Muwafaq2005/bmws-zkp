@@ -40,8 +40,8 @@
     <div class="disclaimer-banner glass">
       <div class="disclaimer-icon">⚠️</div>
       <div class="disclaimer-content">
-        <strong>CRYPTOGRAPHIC PROTOTYPE NOTICE</strong>
-        <p>This application demonstrates zero-knowledge cryptographic compliance verification against the prototype predicate (<code>flow_rate &ge; 800, uv &ge; 40, 20 &le; temp &le; 30, 25 &le; sal &le; 35, turb &le; 5</code>). <em>These thresholds represent demonstration rules and MUST NOT be presented as a complete or authoritative IMO D-2 biological compliance certification.</em></p>
+        <strong>NOT AN IMO D-2 CERTIFICATION</strong>
+        <p>This application demonstrates zero-knowledge cryptographic verification against prototype predicate <code>BWMS-DEMO-V1</code> (<code>flow_rate &ge; 800, uv &ge; 40, 20 &le; temp &le; 30, 25 &le; sal &le; 35, turb &le; 5</code>). <em>These thresholds represent demonstration rules and MUST NOT be presented as a complete or authoritative IMO D-2 biological compliance certification.</em></p>
       </div>
     </div>
 
@@ -64,9 +64,9 @@
           <label for="attack-select">Adversarial Security Hardening Test</label>
           <div class="attack-row">
             <select id="attack-select" class="select-input">
-              <option value="proof_mutation">Proof Mutation (Corrupted groth16 pi_a)</option>
-              <option value="root_mutation">Merkle Root Mutation (Data tampering)</option>
-              <option value="unsupported_ruleset">Rule-Set Mismatch (BWMS-RELAXED-V0)</option>
+              <option value="proof_mutation">Proof Mutation (Groth16 pi_a Forgery)</option>
+              <option value="root_mutation">Merkle Root Mutation (Data Tampering)</option>
+              <option value="unsupported_ruleset">Rule-Set Mismatch (Application Metadata)</option>
               <option value="stale_package">Stale Package Replay Attack (&gt;24h old)</option>
               <option value="replay">Duplicate Attestation Replay Attack</option>
             </select>
@@ -152,9 +152,17 @@
       <!-- Live Verification Status Result Card -->
       <section class="panel glass result-panel">
         <h2>📋 Verification Record & Status</h2>
-        <div class="status-badge-container">
-          <div id="status-badge" class="badge badge-idle">SYSTEM READY</div>
-          <div id="attack-tag" class="attack-tag hidden"></div>
+        
+        <!-- Separate ZKP Verification vs Blockchain Attestation Status Badges -->
+        <div class="dual-status-container">
+          <div class="status-box">
+            <span class="status-title">Cryptographic Verification (SnarkJS Groth16)</span>
+            <div id="status-zkp-badge" class="badge badge-idle">NOT MEASURED</div>
+          </div>
+          <div class="status-box">
+            <span class="status-title">Blockchain Audit Attestation (Besu Contract)</span>
+            <div id="status-chain-badge" class="badge badge-idle">NOT RECORDED</div>
+          </div>
         </div>
 
         <div class="details-grid">
@@ -167,7 +175,7 @@
             <span id="res-win-id" class="detail-value mono">--</span>
           </div>
           <div class="detail-card">
-            <span class="detail-label">Rule-Set Identifier</span>
+            <span class="detail-label">Rule-Set Identifier (Metadata)</span>
             <span id="res-rule-set" class="detail-value mono">BWMS-DEMO-V1</span>
           </div>
           <div class="detail-card">
@@ -175,18 +183,45 @@
             <span id="res-timestamp" class="detail-value">--</span>
           </div>
           <div class="detail-card full-width">
-            <span class="detail-label">Poseidon Merkle Root Commitment</span>
+            <span class="detail-label">Poseidon Merkle Root Commitment (Public Input [0])</span>
             <span id="res-merkle-root" class="detail-value mono break-all">--</span>
           </div>
           <div class="detail-card full-width">
             <span class="detail-label">On-Chain Attestation Tx Hash</span>
             <span id="res-tx-hash" class="detail-value mono break-all">--</span>
           </div>
-          <div id="reason-card" class="detail-card full-width danger-card hidden">
-            <span class="detail-label">Rejection Reason / Threat Vector</span>
-            <span id="res-reason" class="detail-value">--</span>
+
+          <!-- Attack Mitigation Card -->
+          <div id="attack-mitigation-card" class="detail-card full-width danger-card hidden">
+            <div class="attack-mitigation-header">
+              <span class="detail-label">Security Attack Test Mitigation Result</span>
+              <span id="res-attack-result-tag" class="attack-result-tag">ATTACK SUCCESSFULLY MITIGATED</span>
+            </div>
+            <div class="attack-grid">
+              <div><span class="sub-label">Attack Vector:</span> <strong id="res-attack-name">--</strong></div>
+              <div><span class="sub-label">Expected:</span> <span class="badge-mini reject">REJECT</span></div>
+              <div><span class="sub-label">Actual:</span> <span id="res-attack-actual" class="badge-mini reject">REJECT</span></div>
+              <div><span class="sub-label">Protection Mechanism:</span> <span id="res-mitigation-type" class="mono-text">--</span></div>
+            </div>
+            <div class="attack-reason-box">
+              <span class="sub-label">Technical Rejection Reason:</span>
+              <p id="res-reason" class="reason-text">--</p>
+            </div>
           </div>
         </div>
+
+        <!-- Verification Package View (Collapsible) -->
+        <details class="package-view-container glass-inner">
+          <summary class="package-summary">
+            🔍 Inspect Verification Package (VerificationPackage JSON — Raw Telemetry Transmitted: 0 records)
+          </summary>
+          <div class="package-content">
+            <div class="zero-telemetry-pill">
+              🛡️ PRIVACY GUARANTEE: Raw Telemetry Transmitted = 0 records (Committed ordered window)
+            </div>
+            <pre id="package-json-view" class="code-block mono">No package loaded.</pre>
+          </div>
+        </details>
       </section>
 
       <!-- VSAT Communication Simulator Metrics -->
@@ -196,34 +231,34 @@
         <div class="metrics-grid">
           <div class="metric-card">
             <div class="metric-title">Raw Telemetry Size</div>
-            <div id="metric-raw-size" class="metric-value">-- KB</div>
+            <div id="metric-raw-size" class="metric-value">Not measured</div>
             <div class="metric-sub">64 JSON Records</div>
           </div>
           <div class="metric-card highlight">
             <div class="metric-title">Verification Package Size</div>
-            <div id="metric-zk-size" class="metric-value">-- KB</div>
+            <div id="metric-zk-size" class="metric-value">Not measured</div>
             <div class="metric-sub">Zero Raw Data Transmitted</div>
           </div>
           <div class="metric-card accent">
             <div class="metric-title">Bandwidth Savings</div>
-            <div id="metric-savings" class="metric-value">--%</div>
-            <div class="metric-sub">Payload Reduction Ratio</div>
+            <div id="metric-savings" class="metric-value">Not measured</div>
+            <div class="metric-sub">1 - (zkBytes / rawBytes)</div>
           </div>
           <div class="metric-card">
             <div class="metric-title">Transmission Speedup</div>
-            <div id="metric-speedup" class="metric-value">--x</div>
-            <div class="metric-sub">Latency Savings</div>
+            <div id="metric-speedup" class="metric-value">Not measured</div>
+            <div class="metric-sub">VSAT Latency Savings</div>
           </div>
         </div>
 
         <div class="comparison-bar-container">
           <div class="bar-label">
             <span>Payload Size Comparison</span>
-            <span id="bar-summary">--</span>
+            <span id="bar-summary">Not measured</span>
           </div>
           <div class="bar-track">
             <div id="bar-raw" class="bar-fill raw" style="width: 100%;">Raw Telemetry</div>
-            <div id="bar-zk" class="bar-fill zk" style="width: 15%;">ZK Package</div>
+            <div id="bar-zk" class="bar-fill zk" style="width: 10%;">ZK Package</div>
           </div>
         </div>
       </section>
@@ -231,7 +266,7 @@
 
     <!-- Footer -->
     <footer class="footer">
-      <p>BWMS ZKP Project — Privacy-Preserving Compliance Verification Architecture</p>
+      <p>BWMS ZKP Project — Privacy-Preserving Verification of Committed Telemetry Windows</p>
     </footer>
   </div>
 

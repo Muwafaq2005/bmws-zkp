@@ -7,8 +7,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const cfgLatency = document.getElementById("cfg-latency");
   const cfgLoss = document.getElementById("cfg-loss");
 
-  const statusBadge = document.getElementById("status-badge");
-  const attackTag = document.getElementById("attack-tag");
+  const statusZkpBadge = document.getElementById("status-zkp-badge");
+  const statusChainBadge = document.getElementById("status-chain-badge");
 
   const resOpId = document.getElementById("res-op-id");
   const resWinId = document.getElementById("res-win-id");
@@ -16,8 +16,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const resTimestamp = document.getElementById("res-timestamp");
   const resMerkleRoot = document.getElementById("res-merkle-root");
   const resTxHash = document.getElementById("res-tx-hash");
+
+  const attackMitigationCard = document.getElementById("attack-mitigation-card");
+  const resAttackName = document.getElementById("res-attack-name");
+  const resAttackActual = document.getElementById("res-attack-actual");
+  const resMitigationType = document.getElementById("res-mitigation-type");
   const resReason = document.getElementById("res-reason");
-  const reasonCard = document.getElementById("reason-card");
+  const packageJsonView = document.getElementById("package-json-view");
 
   const metricRawSize = document.getElementById("metric-raw-size");
   const metricZkSize = document.getElementById("metric-zk-size");
@@ -67,42 +72,81 @@ document.addEventListener("DOMContentLoaded", () => {
   function renderResult(data) {
     const { shipResult, comparison, verifierRecord, attackMode } = data;
 
+    // 1. Render ZKP Verification Status
     if (verifierRecord.status === "PASS") {
-      statusBadge.className = "badge badge-pass";
-      statusBadge.textContent = "CRYPTOGRAPHICALLY VERIFIED (PASS)";
-      reasonCard.classList.add("hidden");
-      attackTag.classList.add("hidden");
+      statusZkpBadge.className = "badge badge-pass";
+      statusZkpBadge.textContent = "ZKP VERIFIED (PASS)";
+      attackMitigationCard.classList.add("hidden");
     } else {
-      statusBadge.className = "badge badge-reject";
-      statusBadge.textContent = "ATTACK REJECTED (REJECT)";
-      resReason.textContent = `${verifierRecord.attackVector}: ${verifierRecord.reason}`;
-      reasonCard.classList.remove("hidden");
+      statusZkpBadge.className = "badge badge-reject";
+      statusZkpBadge.textContent = "ATTACK REJECTED (REJECT)";
 
       if (attackMode) {
-        attackTag.textContent = `Security Test: ${attackMode.type}`;
-        attackTag.classList.remove("hidden");
+        resAttackName.textContent = attackMode.name || attackMode.type;
+        resAttackActual.textContent = verifierRecord.status;
+        resMitigationType.textContent = verifierRecord.mitigationType || "Application Policy";
+        resReason.textContent = verifierRecord.reason || "Verification failed";
+        attackMitigationCard.classList.remove("hidden");
       }
+    }
+
+    // 2. Render Blockchain Attestation Status
+    if (verifierRecord.attestationTxHash) {
+      statusChainBadge.className = "badge badge-confirmed";
+      statusChainBadge.textContent = `CONFIRMED (TX: ${verifierRecord.attestationTxHash.slice(0, 10)}...)`;
+      resTxHash.textContent = verifierRecord.attestationTxHash;
+    } else {
+      statusChainBadge.className = "badge badge-idle";
+      statusChainBadge.textContent = "NOT RECORDED (On-Chain skipped)";
+      resTxHash.textContent = "None (Rejected or Unconfirmed)";
     }
 
     resOpId.textContent = verifierRecord.operationId;
     resWinId.textContent = verifierRecord.windowId;
-    resRuleSet.textContent = verifierRecord.ruleSetId;
+    resRuleSet.textContent = `${verifierRecord.ruleSetId} (Metadata)`;
     resTimestamp.textContent = verifierRecord.verificationTimestamp;
     resMerkleRoot.textContent = verifierRecord.merkleRoot;
-    resTxHash.textContent = verifierRecord.attestationTxHash || "None (Rejected/Offline)";
 
-    // Render Metrics
-    const rawKb = (comparison.rawTelemetryMetrics.rawPayloadBytes / 1024).toFixed(2);
-    const zkKb = (comparison.verificationPackageMetrics.rawPayloadBytes / 1024).toFixed(2);
+    // 3. Render Verification Package View (Collapsible)
+    if (shipResult && shipResult.verificationPackage) {
+      const displayPkg = {
+        circuit_id: shipResult.verificationPackage.circuit_id,
+        operation_id: shipResult.verificationPackage.operation_id,
+        window_id: shipResult.verificationPackage.window_id,
+        merkle_root: shipResult.verificationPackage.merkle_root,
+        public_inputs: shipResult.verificationPackage.public_inputs,
+        rule_set_id: shipResult.verificationPackage.rule_set_id,
+        generated_at: shipResult.verificationPackage.generated_at,
+        proof_system: "Groth16 / BN254",
+        raw_telemetry_transmitted: "0 records (Committed ordered window)",
+        proof: {
+          pi_a: [
+            shipResult.verificationPackage.proof?.pi_a?.[0]?.slice(0, 20) + "...",
+            shipResult.verificationPackage.proof?.pi_a?.[1]?.slice(0, 20) + "..."
+          ],
+          protocol: shipResult.verificationPackage.proof?.protocol || "groth16",
+          curve: shipResult.verificationPackage.proof?.curve || "bn128"
+        }
+      };
+      packageJsonView.textContent = JSON.stringify(displayPkg, null, 2);
+    }
 
-    metricRawSize.textContent = `${rawKb} KB`;
-    metricZkSize.textContent = `${zkKb} KB`;
-    metricSavings.textContent = `${comparison.byteSavingsPercent}%`;
-    metricSpeedup.textContent = `${comparison.speedupFactor}x`;
+    // 4. Render Dynamic VSAT Metrics
+    if (comparison) {
+      const rawBytes = comparison.rawTelemetryMetrics.rawPayloadBytes;
+      const zkBytes = comparison.verificationPackageMetrics.rawPayloadBytes;
+      const rawKb = (rawBytes / 1024).toFixed(2);
+      const zkKb = (zkBytes / 1024).toFixed(2);
 
-    const zkPercent = Math.max(5, Math.min(100, (zkKb / rawKb) * 100));
-    barZk.style.width = `${zkPercent.toFixed(1)}%`;
-    barSummary.textContent = `${zkKb} KB vs ${rawKb} KB (${comparison.byteSavingsPercent}% Reduction)`;
+      metricRawSize.textContent = `${rawKb} KB`;
+      metricZkSize.textContent = `${zkKb} KB`;
+      metricSavings.textContent = `${comparison.byteSavingsPercent}%`;
+      metricSpeedup.textContent = `${comparison.speedupFactor}x`;
+
+      const zkPercent = Math.max(5, Math.min(100, (zkBytes / rawBytes) * 100));
+      barZk.style.width = `${zkPercent.toFixed(1)}%`;
+      barSummary.textContent = `${zkKb} KB vs ${rawKb} KB (${comparison.byteSavingsPercent}% Bandwidth Savings)`;
+    }
   }
 
   btnRunValid.addEventListener("click", async () => {
@@ -145,18 +189,4 @@ document.addEventListener("DOMContentLoaded", () => {
       btnRunAttack.disabled = false;
     }
   });
-
-  // Initial load metrics fetch
-  fetch("/api/metrics")
-    .then((r) => r.json())
-    .then((res) => {
-      if (res.success && res.data.comparison) {
-        const rawKb = (res.data.comparison.rawTelemetryMetrics.rawPayloadBytes / 1024).toFixed(2);
-        const zkKb = (res.data.comparison.verificationPackageMetrics.rawPayloadBytes / 1024).toFixed(2);
-        metricRawSize.textContent = `${rawKb} KB`;
-        metricZkSize.textContent = `${zkKb} KB`;
-        metricSavings.textContent = `${res.data.comparison.byteSavingsPercent}%`;
-        metricSpeedup.textContent = `${res.data.comparison.speedupFactor}x`;
-      }
-    });
 });

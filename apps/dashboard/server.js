@@ -70,35 +70,42 @@ app.post("/api/pipeline/attack", async (req, res) => {
     const shipResult = await processAndTransmitShipTelemetry(undefined, vsatConfig);
     const tamperedPackage = JSON.parse(JSON.stringify(shipResult.verificationPackage));
 
+    let attackName = "";
     let attackDescription = "";
 
     switch (attackType) {
       case "root_mutation":
+        attackName = "Merkle Root Mutation (Data Tampering)";
         attackDescription = "Altered Merkle root commitment to claim invalid telemetry data";
         tamperedPackage.merkle_root = "999999999999999999999999999999999999999999999999999999999999999999";
         tamperedPackage.public_inputs = [tamperedPackage.merkle_root];
         break;
 
       case "proof_mutation":
+        attackName = "Proof Mutation (Elliptic Curve Forgery)";
         attackDescription = "Mutated Groth16 proof elliptic curve point (pi_a)";
         tamperedPackage.proof.pi_a[0] = "123456789123456789123456789123456789";
         break;
 
       case "unsupported_ruleset":
+        attackName = "Rule-Set Mismatch (Application Metadata)";
         attackDescription = "Submitting proof under unauthorized rule set (BWMS-RELAXED-V0)";
         tamperedPackage.rule_set_id = "BWMS-RELAXED-V0";
         break;
 
       case "stale_package":
+        attackName = "Stale Package Replay Attack";
         attackDescription = "Replaying expired package generated 48 hours ago";
         tamperedPackage.generated_at = new Date(Date.now() - 48 * 3600 * 1000).toISOString();
         break;
 
       case "replay":
+        attackName = "Duplicate Attestation Replay Attack";
         attackDescription = "Replaying an attestation window package that has already been verified on-chain";
         break;
 
       default:
+        attackName = "Proof Mutation";
         attackDescription = "Mutated proof point";
         tamperedPackage.proof.pi_a[0] = "0000000000000000000";
         break;
@@ -130,7 +137,11 @@ app.post("/api/pipeline/attack", async (req, res) => {
       verifierRecord,
       attackMode: {
         type: attackType,
+        name: attackName,
         description: attackDescription,
+        expected: "REJECT",
+        actual: verifierRecord.status,
+        result: verifierRecord.status === "REJECT" ? "ATTACK SUCCESSFULLY MITIGATED" : "ATTACK UNMITIGATED",
       },
     };
 
@@ -160,7 +171,7 @@ app.get("/api/metrics", async (req, res) => {
       data: {
         comparison,
         circuitInfo: {
-          constraints: 68420,
+          constraints: 158647, // Actual measured R1CS constraint count from circom
           publicInputs: 1,
           leaves: 64,
           field: "BN254",
