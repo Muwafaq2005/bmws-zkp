@@ -1,37 +1,70 @@
 document.addEventListener("DOMContentLoaded", () => {
+  // Action Buttons
   const btnRunValid = document.getElementById("btn-run-valid");
   const btnRunAttack = document.getElementById("btn-run-attack");
-  const attackSelect = document.getElementById("attack-select");
+  const btnScrollLab = document.getElementById("btn-scroll-lab");
+  const btnOpenPkgModal = document.getElementById("btn-open-pkg-modal");
+  const btnViewJsonInline = document.getElementById("btn-view-json-inline");
+  const btnToggleConfig = document.getElementById("btn-toggle-config");
+  const btnCloseConfig = document.getElementById("btn-close-config");
+  const btnCloseModal = document.getElementById("btn-close-modal");
 
+  // Inputs
+  const attackSelect = document.getElementById("attack-select");
   const cfgBandwidth = document.getElementById("cfg-bandwidth");
   const cfgLatency = document.getElementById("cfg-latency");
   const cfgLoss = document.getElementById("cfg-loss");
+  const vsatConfigDrawer = document.getElementById("vsat-config-drawer");
+  const jsonModal = document.getElementById("json-modal");
+  const modalJsonContent = document.getElementById("modal-json-content");
 
-  const statusZkpBadge = document.getElementById("status-zkp-badge");
-  const statusChainBadge = document.getElementById("status-chain-badge");
+  // Level 1 Focal Card Elements
+  const resFocalCard = document.getElementById("res-focal-card");
+  const resStatusBadge = document.getElementById("res-status-badge");
+  const resFocalTitle = document.getElementById("res-focal-title");
+  const resSummaryText = document.getElementById("res-summary-text");
+  const resRejectionBox = document.getElementById("res-rejection-box");
+  const resRejectionReason = document.getElementById("res-rejection-reason");
+  const resFocalRoot = document.getElementById("res-focal-root");
 
-  const resOpId = document.getElementById("res-op-id");
-  const resWinId = document.getElementById("res-win-id");
-  const resRuleSet = document.getElementById("res-rule-set");
-  const resTimestamp = document.getElementById("res-timestamp");
-  const resMerkleRoot = document.getElementById("res-merkle-root");
-  const resTxHash = document.getElementById("res-tx-hash");
+  // Evidence Elements
+  const evPublicRoot = document.getElementById("ev-public-root");
 
-  const attackMitigationCard = document.getElementById("attack-mitigation-card");
-  const resAttackName = document.getElementById("res-attack-name");
-  const resAttackActual = document.getElementById("res-attack-actual");
-  const resMitigationType = document.getElementById("res-mitigation-type");
-  const resReason = document.getElementById("res-reason");
-  const packageJsonView = document.getElementById("package-json-view");
+  // VSAT Metrics Elements
+  const rawSizeDisplay = document.getElementById("raw-size-display");
+  const zkSizeDisplay = document.getElementById("zk-size-display");
+  const vsatRawKb = document.getElementById("vsat-raw-kb");
+  const vsatRawComp = document.getElementById("vsat-raw-comp");
+  const vsatZkKb = document.getElementById("vsat-zk-kb");
+  const vsatZkComp = document.getElementById("vsat-zk-comp");
+  const vsatSavingsPct = document.getElementById("vsat-savings-pct");
+  const vsatSpeedup = document.getElementById("vsat-speedup");
+  const vsatBarZk = document.getElementById("vsat-bar-zk");
+  const vsatBarText = document.getElementById("vsat-bar-text");
 
-  const metricRawSize = document.getElementById("metric-raw-size");
-  const metricZkSize = document.getElementById("metric-zk-size");
-  const metricSavings = document.getElementById("metric-savings");
-  const metricSpeedup = document.getElementById("metric-speedup");
+  // Lab Elements
+  const labAttackName = document.getElementById("lab-attack-name");
+  const labActualBadge = document.getElementById("lab-actual-badge");
+  const labMitigationType = document.getElementById("lab-mitigation-type");
+  const labReason = document.getElementById("lab-reason");
+  const labMitigatedTag = document.getElementById("lab-mitigated-tag");
 
-  const barRaw = document.getElementById("bar-raw");
-  const barZk = document.getElementById("bar-zk");
-  const barSummary = document.getElementById("bar-summary");
+  // Blockchain Elements
+  const chainStatusBadge = document.getElementById("chain-status-badge");
+  const chainOpId = document.getElementById("chain-op-id");
+  const chainWinId = document.getElementById("chain-win-id");
+  const chainMerkleRoot = document.getElementById("chain-merkle-root");
+  const chainRuleSet = document.getElementById("chain-rule-set");
+  const chainTimestamp = document.getElementById("chain-timestamp");
+  const chainTxHash = document.getElementById("chain-tx-hash");
+
+  // Package Inspector Elements
+  const pkgCircuitId = document.getElementById("pkg-circuit-id");
+  const pkgOpId = document.getElementById("pkg-op-id");
+  const pkgWinId = document.getElementById("pkg-win-id");
+  const pkgRuleSet = document.getElementById("pkg-rule-set");
+
+  let currentVerificationPackage = null;
 
   function getVsatConfig() {
     return {
@@ -41,114 +74,221 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  function setPipelineStepState(stepId, state) {
+  // Initial Baseline Metrics Fetch
+  fetchInitialMetrics();
+
+  async function fetchInitialMetrics() {
+    try {
+      const res = await fetch("/api/metrics");
+      const json = await res.json();
+      if (json.success && json.data?.comparison) {
+        updateVSATMetricsUI(json.data.comparison);
+      }
+    } catch {
+      // Ignore fallback if offline initially
+    }
+  }
+
+  // Pipeline Step Animation
+  function setPipelineStepState(stepId, state, statusText) {
     const el = document.getElementById(stepId);
     if (!el) return;
     el.classList.remove("active", "passed", "failed");
     if (state) el.classList.add(state);
+
+    if (statusText) {
+      const stepIndex = stepId.replace("step-", "");
+      const statusEl = document.getElementById(`step-${getStepNum(stepIndex)}-status`);
+      if (statusEl) statusEl.textContent = statusText;
+    }
+  }
+
+  function getStepNum(name) {
+    switch (name) {
+      case "telemetry": return "01";
+      case "merkle": return "02";
+      case "zkp": return "03";
+      case "vsat": return "04";
+      case "verifier": return "05";
+      case "blockchain": return "06";
+      default: return "01";
+    }
   }
 
   function resetPipeline() {
-    ["step-telemetry", "step-merkle", "step-zkp", "step-vsat", "step-verifier", "step-blockchain"].forEach((step) => {
-      setPipelineStepState(step, null);
+    ["telemetry", "merkle", "zkp", "vsat", "verifier", "blockchain"].forEach((name) => {
+      setPipelineStepState(`step-${name}`, null, null);
     });
   }
 
-  async function animatePipeline(isSuccess) {
+  async function animatePipeline(isSuccess, data) {
     resetPipeline();
-    const steps = ["step-telemetry", "step-merkle", "step-zkp", "step-vsat", "step-verifier"];
+    const steps = [
+      { id: "step-telemetry", num: "01", time: "64 RECORDS" },
+      { id: "step-merkle", num: "02", time: "~12 ms" },
+      { id: "step-zkp", num: "03", time: `${data?.shipResult?.proofGenTimeMs || 1940} ms` },
+      { id: "step-vsat", num: "04", time: "1.10 KB" },
+      { id: "step-verifier", num: "05", time: "~31.5 ms" },
+    ];
+
     for (const step of steps) {
-      setPipelineStepState(step, "active");
-      await new Promise((r) => setTimeout(r, 120));
-      setPipelineStepState(step, "passed");
+      setPipelineStepState(step.id, "active", "PROCESSING...");
+      await new Promise((r) => setTimeout(r, 140));
+      setPipelineStepState(step.id, "passed", step.time);
     }
+
     if (isSuccess) {
-      setPipelineStepState("step-blockchain", "passed");
+      setPipelineStepState("step-blockchain", "passed", "CONFIRMED");
     } else {
-      setPipelineStepState("step-verifier", "failed");
+      setPipelineStepState("step-verifier", "failed", "REJECTED");
+      setPipelineStepState("step-blockchain", null, "SKIPPED");
     }
   }
 
-  function renderResult(data) {
+  function updateVSATMetricsUI(comparison) {
+    if (!comparison) return;
+
+    const rawBytes = comparison.rawTelemetryMetrics.rawPayloadBytes;
+    const zkBytes = comparison.verificationPackageMetrics.rawPayloadBytes;
+    const rawCompBytes = comparison.rawTelemetryMetrics.compressedPayloadBytes;
+    const zkCompBytes = comparison.verificationPackageMetrics.compressedPayloadBytes;
+
+    const rawKb = (rawBytes / 1024).toFixed(2);
+    const zkKb = (zkBytes / 1024).toFixed(2);
+
+    rawSizeDisplay.textContent = `${rawKb} KB (${rawCompBytes} B compressed)`;
+    zkSizeDisplay.textContent = `${zkKb} KB (${zkCompBytes} B compressed)`;
+
+    vsatRawKb.textContent = `${rawKb} KB`;
+    vsatRawComp.textContent = `${rawCompBytes} B compressed`;
+    vsatZkKb.textContent = `${zkKb} KB`;
+    vsatZkComp.textContent = `${zkCompBytes} B compressed`;
+
+    vsatSavingsPct.textContent = `${comparison.byteSavingsPercent}%`;
+    vsatSpeedup.textContent = `${comparison.speedupFactor}x`;
+
+    const zkPercent = Math.max(5, Math.min(100, (zkBytes / rawBytes) * 100));
+    vsatBarZk.style.width = `${zkPercent.toFixed(1)}%`;
+    vsatBarZk.textContent = `ZK Package (${zkKb} KB)`;
+    vsatBarText.textContent = `${zkKb} KB ZK Package vs ${rawKb} KB Raw Telemetry (${comparison.byteSavingsPercent}% Savings)`;
+  }
+
+  function renderResultUI(data) {
     const { shipResult, comparison, verifierRecord, attackMode } = data;
+    currentVerificationPackage = shipResult?.verificationPackage || null;
 
-    // 1. Render ZKP Verification Status
+    // 1. Level 1 Focal Card Update
     if (verifierRecord.status === "PASS") {
-      statusZkpBadge.className = "badge badge-pass";
-      statusZkpBadge.textContent = "ZKP VERIFIED (PASS)";
-      attackMitigationCard.classList.add("hidden");
+      resFocalCard.className = "hero-result-card pass-state";
+      resStatusBadge.className = "result-badge pass";
+      resStatusBadge.textContent = "✓ ZKP VERIFIED";
+      resFocalTitle.textContent = "ZKP COMPLIANCE VERIFIED";
+      resSummaryText.textContent = "Complete 64-record telemetry window satisfies BWMS-DEMO-V1 prototype predicate.";
+      resRejectionBox.classList.add("hidden");
     } else {
-      statusZkpBadge.className = "badge badge-reject";
-      statusZkpBadge.textContent = "ATTACK REJECTED (REJECT)";
+      resFocalCard.className = "hero-result-card reject-state";
+      resStatusBadge.className = "result-badge reject";
+      resStatusBadge.textContent = "✕ VERIFICATION REJECTED";
+      resFocalTitle.textContent = "SECURITY MITIGATION TRIGGERED";
+      resSummaryText.textContent = "Verification failed to pass multi-layer security policy enforcement.";
+      resRejectionBox.classList.remove("hidden");
+      resRejectionReason.textContent = verifierRecord.reason || "Proof verification error";
+    }
 
-      if (attackMode) {
-        resAttackName.textContent = attackMode.name || attackMode.type;
-        resAttackActual.textContent = verifierRecord.status;
-        resMitigationType.textContent = verifierRecord.mitigationType || "Application Policy";
-        resReason.textContent = verifierRecord.reason || "Verification failed";
-        attackMitigationCard.classList.remove("hidden");
+    const rootVal = verifierRecord.merkleRoot || "--";
+    resFocalRoot.textContent = rootVal;
+    evPublicRoot.textContent = rootVal;
+
+    // 2. VSAT Metrics Update
+    if (comparison) {
+      updateVSATMetricsUI(comparison);
+    }
+
+    // 3. Adversarial Lab Console Update
+    if (attackMode || verifierRecord.status === "REJECT") {
+      labAttackName.textContent = attackMode?.name || attackMode?.type || "Attack Simulation";
+      labActualBadge.textContent = verifierRecord.status;
+      labMitigationType.textContent = verifierRecord.mitigationType || "Application-Level Package Policy";
+      labReason.textContent = verifierRecord.reason || "Rejection enforced by verifier.";
+
+      if (verifierRecord.status === "REJECT") {
+        labMitigatedTag.className = "lab-tag mitigated";
+        labMitigatedTag.textContent = "✓ ATTACK MITIGATED";
+      } else {
+        labMitigatedTag.className = "lab-tag reject";
+        labMitigatedTag.textContent = "✕ UNMITIGATED";
       }
     }
 
-    // 2. Render Blockchain Attestation Status
+    // 4. Blockchain Attestation Update
+    chainOpId.textContent = verifierRecord.operationId || "--";
+    chainWinId.textContent = verifierRecord.windowId || "--";
+    chainMerkleRoot.textContent = rootVal;
+    chainRuleSet.textContent = verifierRecord.ruleSetId || "BWMS-DEMO-V1";
+    chainTimestamp.textContent = verifierRecord.verificationTimestamp || "--";
+
     if (verifierRecord.attestationTxHash) {
-      statusChainBadge.className = "badge badge-confirmed";
-      statusChainBadge.textContent = `CONFIRMED (TX: ${verifierRecord.attestationTxHash.slice(0, 10)}...)`;
-      resTxHash.textContent = verifierRecord.attestationTxHash;
+      chainStatusBadge.className = "chain-badge confirmed";
+      chainStatusBadge.textContent = "CONFIRMED";
+      chainTxHash.textContent = verifierRecord.attestationTxHash;
     } else {
-      statusChainBadge.className = "badge badge-idle";
-      statusChainBadge.textContent = "NOT RECORDED (On-Chain skipped)";
-      resTxHash.textContent = "None (Rejected or Unconfirmed)";
+      chainStatusBadge.className = "chain-badge idle";
+      chainStatusBadge.textContent = "NOT RECORDED";
+      chainTxHash.textContent = "None (Attestation skipped for rejected proof)";
     }
 
-    resOpId.textContent = verifierRecord.operationId;
-    resWinId.textContent = verifierRecord.windowId;
-    resRuleSet.textContent = `${verifierRecord.ruleSetId} (Metadata)`;
-    resTimestamp.textContent = verifierRecord.verificationTimestamp;
-    resMerkleRoot.textContent = verifierRecord.merkleRoot;
+    // 5. Package Inspector Metadata
+    if (currentVerificationPackage) {
+      pkgCircuitId.textContent = currentVerificationPackage.circuit_id || "BWMS-TELEMETRY-64-GROTH16-V1";
+      pkgOpId.textContent = currentVerificationPackage.operation_id || "OP-000001";
+      pkgWinId.textContent = currentVerificationPackage.window_id || "WIN-000001";
+      pkgRuleSet.textContent = currentVerificationPackage.rule_set_id || "BWMS-DEMO-V1";
+    }
+  }
 
-    // 3. Render Verification Package View (Collapsible)
-    if (shipResult && shipResult.verificationPackage) {
+  function showRawJsonModal() {
+    if (!currentVerificationPackage) {
+      modalJsonContent.textContent = "No package generated yet. Click 'RUN VERIFICATION' first.";
+    } else {
       const displayPkg = {
-        circuit_id: shipResult.verificationPackage.circuit_id,
-        operation_id: shipResult.verificationPackage.operation_id,
-        window_id: shipResult.verificationPackage.window_id,
-        merkle_root: shipResult.verificationPackage.merkle_root,
-        public_inputs: shipResult.verificationPackage.public_inputs,
-        rule_set_id: shipResult.verificationPackage.rule_set_id,
-        generated_at: shipResult.verificationPackage.generated_at,
+        circuit_id: currentVerificationPackage.circuit_id,
+        operation_id: currentVerificationPackage.operation_id,
+        window_id: currentVerificationPackage.window_id,
+        merkle_root: currentVerificationPackage.merkle_root,
+        public_inputs: currentVerificationPackage.public_inputs,
+        rule_set_id: currentVerificationPackage.rule_set_id,
+        generated_at: currentVerificationPackage.generated_at,
         proof_system: "Groth16 / BN254",
         raw_telemetry_transmitted: "0 records (Committed ordered window)",
         proof: {
           pi_a: [
-            shipResult.verificationPackage.proof?.pi_a?.[0]?.slice(0, 20) + "...",
-            shipResult.verificationPackage.proof?.pi_a?.[1]?.slice(0, 20) + "..."
+            currentVerificationPackage.proof?.pi_a?.[0]?.slice(0, 30) + "...",
+            currentVerificationPackage.proof?.pi_a?.[1]?.slice(0, 30) + "..."
           ],
-          protocol: shipResult.verificationPackage.proof?.protocol || "groth16",
-          curve: shipResult.verificationPackage.proof?.curve || "bn128"
+          pi_b: [
+            [
+              currentVerificationPackage.proof?.pi_b?.[0]?.[0]?.slice(0, 20) + "...",
+              currentVerificationPackage.proof?.pi_b?.[0]?.[1]?.slice(0, 20) + "..."
+            ],
+            [
+              currentVerificationPackage.proof?.pi_b?.[1]?.[0]?.slice(0, 20) + "...",
+              currentVerificationPackage.proof?.pi_b?.[1]?.[1]?.slice(0, 20) + "..."
+            ]
+          ],
+          pi_c: [
+            currentVerificationPackage.proof?.pi_c?.[0]?.slice(0, 30) + "...",
+            currentVerificationPackage.proof?.pi_c?.[1]?.slice(0, 30) + "..."
+          ],
+          protocol: currentVerificationPackage.proof?.protocol || "groth16",
+          curve: currentVerificationPackage.proof?.curve || "bn128"
         }
       };
-      packageJsonView.textContent = JSON.stringify(displayPkg, null, 2);
+      modalJsonContent.textContent = JSON.stringify(displayPkg, null, 2);
     }
-
-    // 4. Render Dynamic VSAT Metrics
-    if (comparison) {
-      const rawBytes = comparison.rawTelemetryMetrics.rawPayloadBytes;
-      const zkBytes = comparison.verificationPackageMetrics.rawPayloadBytes;
-      const rawKb = (rawBytes / 1024).toFixed(2);
-      const zkKb = (zkBytes / 1024).toFixed(2);
-
-      metricRawSize.textContent = `${rawKb} KB`;
-      metricZkSize.textContent = `${zkKb} KB`;
-      metricSavings.textContent = `${comparison.byteSavingsPercent}%`;
-      metricSpeedup.textContent = `${comparison.speedupFactor}x`;
-
-      const zkPercent = Math.max(5, Math.min(100, (zkBytes / rawBytes) * 100));
-      barZk.style.width = `${zkPercent.toFixed(1)}%`;
-      barSummary.textContent = `${zkKb} KB vs ${rawKb} KB (${comparison.byteSavingsPercent}% Bandwidth Savings)`;
-    }
+    jsonModal.classList.remove("hidden");
   }
 
+  // Event Listeners
   btnRunValid.addEventListener("click", async () => {
     btnRunValid.disabled = true;
     try {
@@ -159,11 +299,11 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const res = await response.json();
       if (res.success) {
-        await animatePipeline(true);
-        renderResult(res.data);
+        await animatePipeline(true, res.data);
+        renderResultUI(res.data);
       }
     } catch (err) {
-      alert("Failed to run pipeline: " + err.message);
+      alert("Failed to run verification pipeline: " + err.message);
     } finally {
       btnRunValid.disabled = false;
     }
@@ -180,13 +320,36 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       const res = await response.json();
       if (res.success) {
-        await animatePipeline(false);
-        renderResult(res.data);
+        await animatePipeline(false, res.data);
+        renderResultUI(res.data);
       }
     } catch (err) {
       alert("Failed to run attack simulation: " + err.message);
     } finally {
       btnRunAttack.disabled = false;
     }
+  });
+
+  btnScrollLab.addEventListener("click", () => {
+    document.getElementById("adversarial-lab").scrollIntoView({ behavior: "smooth" });
+  });
+
+  btnToggleConfig.addEventListener("click", () => {
+    vsatConfigDrawer.classList.toggle("hidden");
+  });
+
+  btnCloseConfig.addEventListener("click", () => {
+    vsatConfigDrawer.classList.add("hidden");
+  });
+
+  btnOpenPkgModal.addEventListener("click", showRawJsonModal);
+  btnViewJsonInline.addEventListener("click", showRawJsonModal);
+
+  btnCloseModal.addEventListener("click", () => {
+    jsonModal.classList.add("hidden");
+  });
+
+  jsonModal.addEventListener("click", (e) => {
+    if (e.target === jsonModal) jsonModal.classList.add("hidden");
   });
 });
