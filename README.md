@@ -1,4 +1,4 @@
-# BWMS ZKP — Privacy-Preserving Zero-Knowledge Verification of BWMS Compliance
+# BWMS-ZKP: Privacy-Preserving Ballast-Water Operational Evidence Verification & Blockchain Attestation
 
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Circom 2](https://img.shields.io/badge/Circom-2.2.3-FF6600?style=flat-square)](https://docs.circom.io/)
@@ -7,113 +7,156 @@
 [![Hyperledger Besu](https://img.shields.io/badge/Hyperledger%20Besu-QBFT%20Consensus-1B67B2?style=flat-square)](https://www.hyperledger.org/projects/besu)
 [![License: MIT](https://img.shields.io/badge/License-MIT-emerald?style=flat-square)](LICENSE)
 
-An end-to-end prototype demonstrating **privacy-preserving verification of a complete, ordered, cryptographically committed BWMS telemetry window without transmitting the underlying telemetry to the remote verifier**.
+An end-to-end Blockchain course-project demonstrating **privacy-preserving verification of a complete, ordered, cryptographically committed BWMS operational evidence telemetry window using Zero-Knowledge Proofs (Groth16 / BN254) + Poseidon Merkle tree commitments + VSAT transmission simulation + Hyperledger Besu (QBFT) permissioned blockchain attestation**.
 
 ---
 
-## 📐 Core Cryptographic Architecture
+## 📌 Core Project Message
 
-The core relation verified by the zero-knowledge circuit is:
-
-$$\text{ValidWindow}(\text{telemetry}) \;\land\; \text{MerkleRoot}(\text{telemetry}) = \text{publicRoot} \;\land\; \text{Compliance}(\text{telemetry}) = \text{true}$$
-
-```
- ┌─────────────────┐       ┌─────────────────┐       ┌─────────────────┐
- │  BWMS Sensors   │ ────► │ 64-Record V1    │ ────► │ Poseidon Merkle │
- │ (Ship-side)     │       │ Telemetry Window│       │ Tree (64 Leaves)│
- └─────────────────┘       └─────────────────┘       └────────┬────────┘
-                                                              │
- ┌─────────────────┐       ┌─────────────────┐                │
- │  Besu QBFT /    │ ◄──── │ Remote Verifier │ ◄──────────────┤
- │  EVM Blockchain │       │ Node (SnarkJS)  │  VSAT Link     ▼
- └─────────────────┘       └─────────────────┘  (1.1 KB ZK) ┌─────────────────┐
-                                                            │ Groth16 Prover  │
-                                                            │ (BN254 Witness) │
-                                                            └─────────────────┘
-```
-
-### Key Technical Specifications
-- **Zero-Knowledge Stack**: Circom 2.2.3, SnarkJS 0.7.6, Groth16 Proving System over BN254 / BN128 curve.
-- **Circuit Complexity**: **158,647 R1CS constraints** (159 template instances, 78,092 nonlinear constraints, 80,555 linear constraints, 640 private inputs, 1 public input).
-- **Commitment Scheme**: 64-leaf binary Merkle tree using Poseidon hash functions (`Poseidon(10)` for telemetry leaves, `Poseidon(2)` for internal nodes). Left/right leaf ordering is preserved without unordered pair sorting.
-- **Numeric Encoding**: Fixed-point scale 10 ($1\text{ unit} = 0.1$). Floating-point values are converted off-chain prior to canonical field element hashing.
-- **Public Inputs**: Single public input (`publicRoot`). Telemetry remains 100% private witness data.
-- **Prototype Predicate (`BWMS-DEMO-V1`)**:
-  $$\text{flow\_rate} \ge 800 \;\land\; \text{uv\_intensity} \ge 40 \;\land\; 20 \le \text{temperature} \le 30 \;\land\; 25 \le \text{salinity} \le 35 \;\land\; \text{turbidity} \le 5$$
+> **"The ship proves properties of its private evidence without transmitting the underlying telemetry; the port independently verifies the proof and records the resulting attestation on-chain."**
 
 ---
 
-## 🛡️ Security Threat Model & Attack Matrix
+## ⚠️ Important Regulatory Disclaimer
 
-The verification engine distinguishes Groth16 cryptographic proof verification from application-level package policy enforcement:
-
-| Attack Vector | Expected Result | Technical Protection Mechanism & Layer |
-| :--- | :--- | :--- |
-| **Proof mutation** | REJECT | Groth16 cryptographic verification (`snarkjs.groth16.verify`) |
-| **Public root mutation** | REJECT | Proof / public input binding (`publicInputs[0] === merkle_root`) |
-| **Public input mutation** | REJECT | Groth16 cryptographic verification |
-| **Telemetry mutation before proof generation** | Different commitment / proof | Poseidon Merkle commitment tree |
-| **Sequence gap** | REJECT | Completeness circuit constraints (`sequence == i + 1`) |
-| **Duplicate sequence** | REJECT | Completeness circuit constraints |
-| **Reordered records** | REJECT | Ordered Poseidon tree commitment + completeness constraints |
-| **Timestamp violation** | REJECT | Completeness circuit strictly increasing timestamp constraints |
-| **Non-compliant telemetry** | REJECT | Compliance circuit predicate bounds |
-| **Operation / window metadata tampering** | REJECT | Application-level package validation policy (*Not a separate ZKP public input in V1*) |
-| **Rule-set metadata tampering** | REJECT | Application-level package validation policy (*Not a separate ZKP public input in V1*) |
-| **Replay of a valid package** | REJECT | Application freshness policy (`maxAgeMs`) + Blockchain duplicate attestation protection |
+> [!WARNING]
+> **EDUCATIONAL PROTOTYPE NOTICE:** `BWMS-DEMO-V1` is an educational prototype rule set demonstrating privacy-preserving verification of ballast-water operational evidence. It does **NOT** constitute IMO D-2 biological discharge certification.
+>
+> The IMO Ballast Water Management Convention D-2 standard specifies biological discharge performance limits (e.g., $<10$ viable organisms $/ \text{m}^3$). The present operational sensor predicate verifies treatment operational evidence (flow rate, UV intensity, temperature, salinity, turbidity). Real-world regulatory verification involves additional evidence such as applicable certification, Ballast Water Management Plan (BWMP), Ballast Water Record Book, and biological sampling.
 
 ---
 
-## 📂 Workspace Directory Structure
+## 📐 System Architecture & Workflow Pipeline
 
 ```
-bwms-zkp/
-├── apps/
-│   ├── ship/          # Ship-side telemetry acquisition & proof generation service (@bwms/ship-app)
-│   ├── verifier/      # Remote verification & blockchain attestation service (@bwms/verifier-app)
-│   └── dashboard/     # Live interactive web demonstration dashboard (@bwms/dashboard)
-├── blockchain/
-│   ├── contracts/     # Solidity smart contract (BWMSAttestation.sol)
-│   ├── test/          # Hardhat contract unit test suite
-│   ├── scripts/       # Deployment scripts
-│   └── besu/          # Hyperledger Besu 4-node QBFT permissioned cluster setup
-├── circuits/          # Circom zero-knowledge circuit specifications
-│   ├── telemetry_merkle_root.circom
-│   ├── telemetry_leaf.circom
-│   ├── merkle.circom
-│   ├── completeness.circom
-│   └── compliance.circom
-├── packages/
-│   ├── telemetry/     # Deterministic 64-record telemetry generator (@bwms/telemetry)
-│   ├── merkle/        # Poseidon binary Merkle tree builder (@bwms/merkle)
-│   ├── compliance/    # Prototype predicate compliance evaluator (@bwms/compliance)
-│   └── zk/            # Proof package builder & security verifier engine (@bwms/zk)
-├── simulator/
-│   └── vsat/          # VSAT satellite communication link simulator (@bwms/vsat-simulator)
-├── scripts/           # System benchmarking runner (benchmark.ts)
-├── benchmarks/        # Saved quantitative measurement results (benchmark_results.json)
-└── docs/              # Specifications, handoff docs, and demonstration walkthrough
+SHIP SIDE
+  Sensors / Simulator
+       ↓
+  64-Record Telemetry Window (Canonicalization & Integrity Checks)
+       ↓
+  Poseidon Merkle Commitment (64-Leaf Binary Tree Root)
+       ↓
+  Groth16 Zero-Knowledge Prover (158,647 R1CS Constraints over BN254)
+       ↓
+  Succinct Verification Package (1.10 KB — 0 Raw Telemetry Records)
+       ↓
+  VSAT Transmission Simulation (512 kbps GEO Link)
+
+PORT SIDE
+  Package Received & Structural JSON Validation
+       ↓
+  Metadata & Policy Validation (Rule Set, Expiration, Replay)
+       ↓
+  Merkle Root Commitment Alignment Check
+       ↓
+  Groth16 Cryptographic Verification (snarkjs groth16.verify)
+       ↓
+  RECORD ATTESTATION ON-CHAIN (Solidity Smart Contract Transaction)
+       ↓
+  Hyperledger Besu (QBFT) / Local EVM Permissioned Blockchain Storage
+       ↓
+  Persistent On-Chain Attestation History & Audit Inspector
 ```
 
 ---
 
-## 🚀 Quick Start Guide
+## 🔐 Cryptographic Specifications & Frozen Core
 
-### Prerequisites
-- **Node.js**: v20.0.0 or higher
-- **pnpm**: v11.0.0 or higher
-- **Docker**: (Optional, for running Hyperledger Besu permissioned cluster)
+- **Circuit ID**: `BWMS-TELEMETRY-64-GROTH16-V1`
+- **Rule Set ID**: `BWMS-DEMO-V1`
+- **Proving System**: Groth16 over elliptic curve BN254 (alt_bn128).
+- **R1CS Constraints**: **158,647 constraints** (640 private inputs, 1 public input).
+- **Public Input**: Single public input — Poseidon Merkle root (`publicRoot`).
+- **Telemetry Window**: Exactly 64 ordered records per window.
+- **Fixed-Point Scale**: $10$ ($1\text{ unit} = 0.1$).
+- **Canonical Leaf Ordering**:
+  1. `operation_id`
+  2. `window_id`
+  3. `sequence` ($1 \dots 64$)
+  4. `timestamp` (strictly monotonic increasing)
+  5. `sensor_id`
+  6. `flow_rate_scaled`
+  7. `uv_intensity_scaled`
+  8. `temperature_scaled`
+  9. `salinity_scaled`
+  10. `turbidity_scaled`
+- **Merkle Tree**: Poseidon hash function (`Poseidon(10)` for telemetry leaf elements, `Poseidon(2)` for internal nodes).
+- **Demo Compliance Predicate (`BWMS-DEMO-V1`)**:
+  - $\text{flow\_rate} \ge 800 \text{ m}^3/\text{h}$
+  - $\text{uv\_intensity} \ge 40 \text{ mW/cm}^2$
+  - $20 \le \text{temperature} \le 30 \text{ }^\circ\text{C}$
+  - $25 \le \text{salinity} \le 35 \text{ PSU}$
+  - $\text{turbidity} \le 5.0 \text{ NTU}$
 
-### 1. Installation & Compilation
+---
+
+## 🖥️ Operational Console (4 Major Areas)
+
+The web dashboard is built using a maritime operations & cybersecurity verification aesthetic:
+
+1. **SHIP ZKP CONSOLE**:
+   - Vessel metadata & operation identifiers (`M/V PACIFIC PROSPERITY`, `IMO 9876543`, `OP-000001`, `WIN-000001`).
+   - Live simulated sensor values with status indicators.
+   - Interactive 64-record telemetry window builder (`0/64` $\to$ `64/64`) with 5 integrity checks (Window complete, Sequence integrity, Monotonic timestamp integrity, Operation consistency, Window consistency).
+   - Poseidon Merkle root commitment display with copy button.
+   - Groth16 proof status & proof size display with privacy warning (*"Underlying telemetry remains local to vessel"*).
+   - VSAT link transmission performance metrics card.
+   - Primary Actions: `START OPERATION`, `GENERATE ZK PROOF`, `TRANSMIT TO PORT`.
+
+2. **PORT VERIFICATION CONSOLE**:
+   - Received package info & rule-set identifier.
+   - **Raw Data Privacy Panel**: Visually contrasts **RAW TELEMETRY NOT RECEIVED** (0 records) vs **VERIFIER RECEIVED** (commitment, proof, metadata).
+   - **IMO BWM / D-2 Regulatory Context Panel**: Explains D-2 biological limits vs operational sensor predicates with explicit prototype disclaimers and SIMULATED D-2 EVIDENCE badges.
+   - 6-Stage Verification Pipeline with live transitions (`PENDING` $\to$ `RUNNING` $\to$ `PASSED` / `FAILED`).
+   - `RECORD ATTESTATION ON-CHAIN` action triggering real EVM smart contract transactions with live lifecycle stages (`SUBMITTING` $\to$ `BROADCAST` $\to$ `PENDING` $\to$ `CONFIRMED`).
+   - Real transaction details display (Tx hash, Block number, Contract address, Verifier address, Event name).
+
+3. **BLOCKCHAIN HISTORY SCREEN**:
+   - Direct connection summary to Hyperledger Besu (QBFT) / local EVM node.
+   - On-chain attestation table queried directly from smart contract getters (`totalAttestations()`, `getAttestation()`, events).
+   - **Distinguishes between on-chain attestations and verification attempts** (failed verification attempts are rejected onboard and never recorded as on-chain attestations).
+   - Clickable row opening full attestation detail modal with copy buttons for hashes.
+
+4. **SECURITY / ATTACK LAB**:
+   - Interactive classroom lab covering 11 attack vectors:
+     - Merkle root mutation
+     - Groth16 proof forgery
+     - Rule set mismatch
+     - Stale package replay (>24h old)
+     - Duplicate attestation replay
+     - Operation ID mismatch
+     - Window ID mismatch
+     - Telemetry reordering
+     - Missing record
+     - Sequence gap
+     - Non-monotonic timestamp
+   - Detailed Security Mitigation Report card showing Attack Input, Expected Security Property, Actual Pipeline Result (`REJECT`), Mitigation Mechanism, and Rejection Reason.
+
+---
+
+## 🛠️ Setup & Run Instructions
+
+### Environment Variables
+Configure via `.env` or system environment variables (defaults provided for local development):
+
+```bash
+BESU_RPC_URL="http://127.0.0.1:8545"
+CHAIN_ID=1337
+ATTESTATION_CONTRACT_ADDRESS="0x5FbDB2315678afecb367f032d93F642f64180aa3"
+VERIFIER_PRIVATE_KEY="0xc87ecb10b6601ad372c27102a24d3dd819974eb447b9319a28bf2c246f663675"
+PORT=3000
+```
+
+### 1. Install Workspace Dependencies & Build Packages
 ```bash
 # Clone the repository
 git clone https://github.com/Muwafaq2005/bmws-zkp.git
 cd bwms-zkp
 
-# Install monorepo workspace dependencies
+# Install workspace dependencies
 pnpm install
 
-# Build all TypeScript packages in topological order
+# Build all workspace packages
 pnpm --filter @bwms/telemetry build
 pnpm --filter @bwms/merkle build
 pnpm --filter @bwms/zk build
@@ -123,73 +166,60 @@ pnpm --filter @bwms/verifier-app build
 pnpm --filter @bwms/blockchain build
 ```
 
+### 2. Launch Besu Blockchain & Deploy Smart Contract
+To run the Hyperledger Besu 4-node QBFT cluster via Docker Compose:
+```bash
+cd blockchain/besu
+docker-compose up -d
+cd ../..
+```
+Alternatively, for standalone local development without Docker, Hardhat node can be started:
+```bash
+pnpm --filter @bwms/blockchain node
+```
+
+Deploy the `BWMSAttestation.sol` contract:
+```bash
+pnpm --filter @bwms/blockchain deploy:local
+```
+
+### 3. Start the Live Operational Console Application
+```bash
+pnpm dashboard
+```
+Open **`http://localhost:3000`** in your web browser.
+
 ---
 
-## 🧪 Testing & Verification
+## 🧪 Testing Suite Execution
 
-### 1. Run Workspace Unit Test Suites
+Run all workspace unit tests:
 ```bash
 pnpm test
 ```
-Runs 49 Vitest unit tests across all workspace packages.
 
-### 2. Run ZKP Circuit Witness Integration Tests
-```bash
-node tests/zk/test_integrated_zkp.mjs
-```
-Runs 11 adversarial tests directly against Circom witness generators (`valid`, `noncompliant-data`, `sequence-gap`, `duplicate-sequence`, `reordered-records`, `timestamp-anomalies`, `operation/window-mismatches`).
-
-### 3. Run Phase 1 Security Hardening Attack Suite
-```bash
-pnpm --filter @bwms/zk test
-```
-Executes 12 adversarial attack vectors testing proof point mutations, Merkle root tampering, metadata modification, replay attacks, stale package expiration, and rule-set ID mismatches.
-
-### 4. Run Smart Contract Unit Tests
+Run smart contract tests:
 ```bash
 pnpm --filter @bwms/blockchain test
 ```
 
----
-
-## 🖥️ Live Visual Demonstration Dashboard
-
-Launch the interactive web interface:
+Run security attack vector suite:
 ```bash
-pnpm dashboard
+pnpm --filter @bwms/zk test
 ```
-Open **`http://localhost:3000`** in your browser.
 
-### Features
-- **Live Pipeline Visualizer**: Trace telemetry generation $\rightarrow$ Merkle root $\rightarrow$ Groth16 proof $\rightarrow$ VSAT transmission $\rightarrow$ Remote verification $\rightarrow$ Besu blockchain attestation.
-- **Separate Verification Badges**: Distinct statuses for `ZKP VERIFIED` (Groth16) vs `CONFIRMED` (Blockchain Attestation).
-- **Expandable Package Inspector**: Collapsible JSON inspector showing actual payload fields and explicitly confirming: `Raw Telemetry Transmitted: 0 records`.
-- **Interactive Security Attack Simulation**: Test instant rejection of proof mutations, data tampering, stale packages, and rule-set mismatches.
+Run Circom witness integration tests:
+```bash
+node tests/zk/test_integrated_zkp.mjs
+```
 
 ---
 
-## 📊 Empirical Benchmarking Results
+## 🔒 Limitations
 
-Captured via `pnpm benchmark` (Reproducible Measured Results):
-
-| Metric | Raw Telemetry Transmission | ZK Verification Package | Performance Gain / Measured Delta |
-| :--- | :--- | :--- | :--- |
-| **Payload Size (Uncompressed)** | **14,238 bytes** (~14.2 KB) | **1,102 bytes** (~1.1 KB) | **92.26% Bandwidth Reduction** |
-| **Payload Size (Gzip Compressed)** | 887 bytes | 640 bytes | **27.85% Compression Savings** |
-| **Packets Sent (512 kbps VSAT)** | 11 TCP Segments | 1 TCP Segment | **90.9% Fewer Packets** |
-| **Transmission Latency (650 ms GEO)** | 879 ms | 668 ms | **211 ms Faster (1.32x Speedup)** |
-| **Mean Proof Verification** | N/A | **31.55 ms** | Instant Verification |
-| **R1CS Constraints** | N/A | **158,647 Constraints** | 64-Leaf Poseidon Tree |
-| **On-Chain Storage** | Raw Telemetry Excluded | Root + Proof Hash Only | **Privacy Preserved** |
-
----
-
-## 🔒 Cryptographic Limitations & Disclaimers
-
-1. **Sensor Authenticity**: The zero-knowledge proof verifies the mathematical compliance of committed telemetry data; it does **not** prove physical sensor hardware authenticity or physical measurement truth.
-2. **Completeness Scope**: Completeness is cryptographically enforced for the 64-record window; it does not prove that no unobserved telemetry existed outside the selected window.
-3. **Prototype Predicate**: Thresholds in `BWMS-DEMO-V1` are demonstration rules and **must not be represented as an authoritative IMO D-2 biological compliance certification**.
-4. **Rule-Set Binding**: `rule_set_id` is validated at the package metadata level; production circuits should commit to a hashed rule-set digest in public inputs.
+1. **Sensor Authenticity**: The ZKP proves mathematical properties of committed evidence; it does **not** prove physical sensor hardware tamper-resistance or biological truth.
+2. **Blockchain Attestation vs Verifier**: The smart contract acts as an immutable attestation registry; it does **not** execute the Groth16 pairing check on-chain in this V1 architecture (verification occurs at the port verifier node prior to recording).
+3. **Demo Predicate Scope**: Thresholds in `BWMS-DEMO-V1` demonstrate operational evidence verification and do **not** constitute authoritative IMO D-2 compliance certification.
 
 ---
 

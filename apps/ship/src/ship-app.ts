@@ -53,16 +53,10 @@ export async function processAndTransmitShipTelemetry(
   try {
     proof = JSON.parse(await readFile(PROOF_PATH, "utf8"));
     publicInputs = JSON.parse(await readFile(PUBLIC_PATH, "utf8"));
-  } catch {
-    // Fallback mock proof for standalone testing if build/zk hasn't been compiled
-    proof = {
-      pi_a: ["1", "2", "1"],
-      pi_b: [["1", "2"], ["3", "4"], ["1", "0"]],
-      pi_c: ["1", "2", "1"],
-      protocol: "groth16",
-      curve: "bn128"
-    };
-    publicInputs = [merkleRoot];
+  } catch (err) {
+    throw new Error(
+      `Missing ZK proof artifacts at ${PROOF_PATH}. Please ensure proof generation has been executed before transmitting telemetry package: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   // 4. Construct Verification Package (No Raw Telemetry Included)

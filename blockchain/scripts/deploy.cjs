@@ -5,11 +5,16 @@ const path = require("node:path");
 async function main() {
   console.log("Deploying BWMSAttestation smart contract...");
 
-  const [deployer] = await ethers.getSigners();
+  const signers = await ethers.getSigners();
+  let deployer = signers[0];
+  if (!deployer) {
+    const defaultPrivateKey = process.env.VERIFIER_PRIVATE_KEY || "0xc87ecb10b6601ad372c27102a24d3dd819974eb447b9319a28bf2c246f663675";
+    deployer = new ethers.Wallet(defaultPrivateKey, ethers.provider);
+  }
   console.log("Deployer account:", deployer.address);
 
-  const BWMSAttestation = await ethers.getContractFactory("BWMSAttestation");
-  const attestation = await BWMSAttestation.deploy();
+  const BWMSAttestation = await ethers.getContractFactory("BWMSAttestation", deployer);
+  const attestation = await BWMSAttestation.deploy({ type: 0, gasPrice: 0, gasLimit: 3000000 });
   await attestation.waitForDeployment();
 
   const address = await attestation.getAddress();

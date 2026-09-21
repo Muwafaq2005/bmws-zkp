@@ -1,5 +1,5 @@
 {
-  "timestamp": "2026-09-10T09:13:39.745Z",
+  "timestamp": "2026-09-21T05:47:13.200Z",
   "circuitMetrics": {
     "circuitName": "telemetry_merkle_root.circom",
     "system": "Groth16",
@@ -15,10 +15,10 @@
     "templateInstances": 159
   },
   "performanceTimingMs": {
-    "telemetryGeneration": 1.36,
-    "merkleTreeComputation": 776.18,
-    "meanProofVerification": 31.55,
-    "totalPipelineExecution": 1414.81
+    "telemetryGeneration": 0.37,
+    "merkleTreeComputation": 241.01,
+    "meanProofVerification": 11.04,
+    "totalPipelineExecution": 464.77
   },
   "payloadSizeComparison": {
     "rawTelemetryBytes": 14238,
@@ -69,6 +69,6 @@
     "cpuModel": "AMD Ryzen 7 7840HS w/ Radeon 780M Graphics",
     "cpuCores": 16,
     "totalMemoryMb": 15159,
-    "freeMemoryMb": 7549
+    "freeMemoryMb": 7622
   }
 }

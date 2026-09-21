@@ -52,9 +52,10 @@ export async function processRemoteVerification(
 
   try {
     vk = JSON.parse(await readFile(VK_PATH, "utf8"));
-  } catch {
-    // Fallback key mock if build/zk key isn't generated
-    vk = {};
+  } catch (err) {
+    throw new Error(
+      `Missing verification key artifact at ${VK_PATH}: ${err instanceof Error ? err.message : String(err)}`
+    );
   }
 
   const options: VerificationOptions = {
@@ -80,18 +81,39 @@ export async function processRemoteVerification(
     ruleSetId: ruleSet,
     verificationTimestamp: timestamp,
     disclaimer:
-      "Cryptographically verified against the implemented prototype predicate. NOT an authoritative IMO D-2 biological compliance certification.",
+      "BWMS-DEMO-V1 is an educational prototype rule set demonstrating privacy-preserving verification of ballast-water operational evidence. It does not constitute IMO D-2 certification.",
   };
 
   // If valid and on-chain attestation enabled, execute contract submission
   if (verificationResult.valid && recordOnChain) {
     try {
-      const contractInfo = JSON.parse(await readFile(CONTRACT_INFO_PATH, "utf8"));
-      // Connect to local Hardhat node or Besu RPC
-      const provider = new ethers.JsonRpcProvider("http://127.0.0.1:8545");
-      const signer = new ethers.Wallet("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80", provider);
+      let contractAddress = process.env.ATTESTATION_CONTRACT_ADDRESS;
+      let abi: any;
 
-      const contract = new ethers.Contract(contractInfo.address, contractInfo.abi, signer);
+      if (fs.existsSync(CONTRACT_INFO_PATH)) {
+        const contractInfo = JSON.parse(await readFile(CONTRACT_INFO_PATH, "utf8"));
+        contractAddress = contractAddress || contractInfo.address;
+        abi = contractInfo.abi;
+      }
+
+      if (!contractAddress) {
+        throw new Error("Contract address is missing. Ensure BWMSAttestation contract is deployed.");
+      }
+
+      const rpcUrl = process.env.BESU_RPC_URL || "http://127.0.0.1:8545";
+      const privateKey = process.env.VERIFIER_PRIVATE_KEY || "0xc87ecb10b6601ad372c27102a24d3dd819974eb447b9319a28bf2c246f663675";
+
+      const provider = new ethers.JsonRpcProvider(rpcUrl);
+      const signer = new ethers.Wallet(privateKey, provider);
+
+      if (!abi) {
+        // Fallback standard ABI for recordAttestation
+        abi = [
+          "function recordAttestation(string operationId, string windowId, uint256 merkleRoot, string ruleSetId, bool compliant, uint256 verificationTimestamp, bytes32 proofHash) returns (bytes32)"
+        ];
+      }
+
+      const contract = new ethers.Contract(contractAddress, abi, signer);
       const proofHash = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(pkg.proof ?? {})));
       const epochSeconds = Math.floor(Date.parse(timestamp) / 1000);
 
@@ -102,14 +124,18 @@ export async function processRemoteVerification(
         ruleSet,
         true,
         epochSeconds,
-        proofHash
+        proofHash,
+        { gasLimit: 500000 }
       );
       const receipt = await tx.wait();
 
       record.attestationTxHash = receipt.hash;
       record.blockNumber = receipt.blockNumber;
     } catch (err) {
-      console.warn("On-chain attestation record skipped or failed:", err instanceof Error ? err.message : err);
+      const errMsg = err instanceof Error ? err.message : String(err);
+      console.error("On-chain attestation transaction failed:", errMsg);
+      record.reason = `Blockchain attestation failed: ${errMsg}`;
+      // Do NOT set fake transaction hash! Fail closed.
     }
   }
 

@@ -262,6 +262,9 @@ importers:
       '@bwms/zk':
         specifier: workspace:*
         version: link:../../packages/zk
+      ethers:
+        specifier: ^6.17.0
+        version: 6.17.0
       express:
         specifier: ^4.21.2
         version: 4.22.2(supports-color@8.1.1)

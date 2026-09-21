@@ -1,401 +1,449 @@
 document.addEventListener("DOMContentLoaded", () => {
-  // Action Buttons
-  const btnRunValid = document.getElementById("btn-run-valid");
-  const btnRunAttack = document.getElementById("btn-run-attack");
-  const btnScrollLab = document.getElementById("btn-scroll-lab");
-  const btnOpenPkgModal = document.getElementById("btn-open-pkg-modal");
-  const btnViewJsonInline = document.getElementById("btn-view-json-inline");
-  const btnToggleConfig = document.getElementById("btn-toggle-config");
-  const btnCloseConfig = document.getElementById("btn-close-config");
-  const btnCloseModal = document.getElementById("btn-close-modal");
-  const btnOpenChainModal = document.getElementById("btn-open-chain-modal");
-  const btnCloseChainModal = document.getElementById("btn-close-chain-modal");
+  // Navigation Tabs
+  const navTabs = document.querySelectorAll(".nav-tab");
+  const tabPanes = document.querySelectorAll(".tab-pane");
 
-  // Inputs
-  const attackSelect = document.getElementById("attack-select");
-  const cfgBandwidth = document.getElementById("cfg-bandwidth");
-  const cfgLatency = document.getElementById("cfg-latency");
-  const cfgLoss = document.getElementById("cfg-loss");
-  const vsatConfigDrawer = document.getElementById("vsat-config-drawer");
-  const jsonModal = document.getElementById("json-modal");
-  const modalJsonContent = document.getElementById("modal-json-content");
-  const chainModal = document.getElementById("chain-modal");
-  const modalChainContent = document.getElementById("modal-chain-content");
+  // Ship Console Controls
+  const btnShipOperate = document.getElementById("btn-ship-operate");
+  const btnShipProof = document.getElementById("btn-ship-proof");
+  const btnShipTransmit = document.getElementById("btn-ship-transmit");
+  const btnCopyRoot = document.getElementById("btn-copy-root");
 
-  // Level 1 Focal Card Elements
-  const resFocalCard = document.getElementById("res-focal-card");
-  const resStatusBadge = document.getElementById("res-status-badge");
-  const resFocalTitle = document.getElementById("res-focal-title");
-  const resSummaryText = document.getElementById("res-summary-text");
-  const resRejectionBox = document.getElementById("res-rejection-box");
-  const resRejectionReason = document.getElementById("res-rejection-reason");
-  const resFocalRoot = document.getElementById("res-focal-root");
+  // Ship UI Elements
+  const shipOpId = document.getElementById("ship-op-id");
+  const shipWinId = document.getElementById("ship-win-id");
+  const shipTimestamp = document.getElementById("ship-timestamp");
+  const sensFlow = document.getElementById("sens-flow");
+  const sensUv = document.getElementById("sens-uv");
+  const sensTemp = document.getElementById("sens-temp");
+  const sensSalinity = document.getElementById("sens-salinity");
+  const sensTurb = document.getElementById("sens-turb");
+  const winCounterText = document.getElementById("win-counter-text");
+  const winProgressFill = document.getElementById("win-progress-fill");
+  const shipMerkleRoot = document.getElementById("ship-merkle-root");
+  const shipProofStatus = document.getElementById("ship-proof-status");
+  const shipProofSize = document.getElementById("ship-proof-size");
+  const vsatRawSize = document.getElementById("vsat-raw-size");
+  const vsatZkSize = document.getElementById("vsat-zk-size");
+  const vsatSavings = document.getElementById("vsat-savings");
 
-  // Evidence Elements
-  const evPublicRoot = document.getElementById("ev-public-root");
+  // Port Verification Controls & UI
+  const portOpWin = document.getElementById("port-op-win");
+  const portPkgTime = document.getElementById("port-pkg-time");
+  const portMerkleRoot = document.getElementById("port-merkle-root");
+  const btnRunVerification = document.getElementById("btn-run-verification");
+  const btnRecordAttestation = document.getElementById("btn-record-attestation");
+  const portResultBanner = document.getElementById("port-result-banner");
+  const portBannerTitle = document.getElementById("port-banner-title");
+  const portBannerDesc = document.getElementById("port-banner-desc");
 
-  // VSAT Metrics Elements
-  const rawSizeDisplay = document.getElementById("raw-size-display");
-  const zkSizeDisplay = document.getElementById("zk-size-display");
-  const vsatRawKb = document.getElementById("vsat-raw-kb");
-  const vsatRawComp = document.getElementById("vsat-raw-comp");
-  const vsatZkKb = document.getElementById("vsat-zk-kb");
-  const vsatZkComp = document.getElementById("vsat-zk-comp");
-  const vsatSavingsPct = document.getElementById("vsat-savings-pct");
-  const vsatSpeedup = document.getElementById("vsat-speedup");
-  const vsatBarZk = document.getElementById("vsat-bar-zk");
-  const vsatBarText = document.getElementById("vsat-bar-text");
+  // Transaction Lifecycle Elements
+  const txStepSubmit = document.getElementById("tx-step-submit");
+  const txStepBroadcast = document.getElementById("tx-step-broadcast");
+  const txStepPending = document.getElementById("tx-step-pending");
+  const txStepConfirmed = document.getElementById("tx-step-confirmed");
+  const txHash = document.getElementById("tx-hash");
+  const txBlockNum = document.getElementById("tx-block-num");
+  const txContractAddr = document.getElementById("tx-contract-addr");
+  const txVerifierAddr = document.getElementById("tx-verifier-addr");
 
-  // Lab Elements
-  const labAttackName = document.getElementById("lab-attack-name");
-  const labActualBadge = document.getElementById("lab-actual-badge");
-  const labMitigationType = document.getElementById("lab-mitigation-type");
-  const labReason = document.getElementById("lab-reason");
-  const labMitigatedTag = document.getElementById("lab-mitigated-tag");
+  // Blockchain History Elements
+  const btnRefreshHistory = document.getElementById("btn-refresh-history");
+  const histContract = document.getElementById("hist-contract");
+  const histTotalCount = document.getElementById("hist-total-count");
+  const historyTableBody = document.getElementById("history-table-body");
+  const headerChainStatus = document.getElementById("header-chain-status");
 
-  // Blockchain Elements
-  const chainStatusBadge = document.getElementById("chain-status-badge");
-  const chainOpId = document.getElementById("chain-op-id");
-  const chainWinId = document.getElementById("chain-win-id");
-  const chainMerkleRoot = document.getElementById("chain-merkle-root");
-  const chainRuleSet = document.getElementById("chain-rule-set");
-  const chainTimestamp = document.getElementById("chain-timestamp");
-  const chainTxHash = document.getElementById("chain-tx-hash");
+  // Security Lab Controls & UI
+  const labAttackSelect = document.getElementById("lab-attack-select");
+  const attackDescText = document.getElementById("attack-desc-text");
+  const btnRunAttackSimulation = document.getElementById("btn-run-attack-simulation");
+  const repAttackName = document.getElementById("rep-attack-name");
+  const repActualResult = document.getElementById("rep-actual-result");
+  const repMitigationType = document.getElementById("rep-mitigation-type");
+  const repExpectedProperty = document.getElementById("rep-expected-property");
+  const repRejectionReason = document.getElementById("rep-rejection-reason");
+  const labMitigatedBadge = document.getElementById("lab-mitigated-badge");
 
-  // Package Inspector Elements
-  const pkgCircuitId = document.getElementById("pkg-circuit-id");
-  const pkgOpId = document.getElementById("pkg-op-id");
-  const pkgWinId = document.getElementById("pkg-win-id");
-  const pkgRuleSet = document.getElementById("pkg-rule-set");
+  // Modal Elements
+  const detailModal = document.getElementById("detail-modal");
+  const btnCloseDetail = document.getElementById("btn-close-detail");
+  const modalDetailJson = document.getElementById("modal-detail-json");
 
   let currentVerificationPackage = null;
+  let currentVerifierRecord = null;
+  let historyCache = [];
 
-  function getVsatConfig() {
-    return {
-      bandwidthKbps: Number(cfgBandwidth.value),
-      roundTripLatencyMs: Number(cfgLatency.value),
-      packetLossPercent: Number(cfgLoss.value),
-    };
-  }
+  // TAB SWITCHING LOGIC
+  navTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const targetTab = tab.dataset.tab;
+      navTabs.forEach((t) => t.classList.remove("active"));
+      tabPanes.forEach((p) => p.classList.remove("active"));
 
-  // Initial Baseline Metrics Fetch
-  fetchInitialMetrics();
+      tab.classList.add("active");
+      document.getElementById(targetTab)?.classList.add("active");
 
-  async function fetchInitialMetrics() {
+      if (targetTab === "tab-history") {
+        fetchBlockchainHistory();
+      }
+    });
+  });
+
+  // INITIALIZE BLOCKCHAIN STATUS & HISTORY
+  fetchBlockchainHistory();
+
+  async function fetchBlockchainHistory() {
     try {
-      const res = await fetch("/api/metrics");
+      const res = await fetch("/api/blockchain/history");
       const json = await res.json();
-      if (json.success && json.data?.comparison) {
-        updateVSATMetricsUI(json.data.comparison);
+
+      if (json.success && json.data) {
+        const d = json.data;
+        headerChainStatus.textContent = d.connected ? "CONNECTED" : "OFFLINE";
+        headerChainStatus.className = d.connected ? "pill-value text-green" : "pill-value";
+
+        histContract.textContent = d.contractAddress || "--";
+        histTotalCount.textContent = d.totalAttestations || "0";
+        historyCache = d.history || [];
+
+        renderHistoryTable(historyCache);
       }
     } catch {
-      // Ignore fallback if offline initially
+      headerChainStatus.textContent = "DISCONNECTED";
     }
   }
 
-  // Pipeline Step Animation
-  function setPipelineStepState(stepId, state, statusText) {
-    const el = document.getElementById(stepId);
-    if (!el) return;
-    el.classList.remove("active", "passed", "failed");
-    if (state) el.classList.add(state);
-
-    if (statusText) {
-      const stepIndex = stepId.replace("step-", "");
-      const statusEl = document.getElementById(`step-${getStepNum(stepIndex)}-status`);
-      if (statusEl) statusEl.textContent = statusText;
+  function renderHistoryTable(records) {
+    if (!records || records.length === 0) {
+      historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="9" class="empty-row">No on-chain attestations recorded yet. Execute a valid ship & verifier workflow to issue an EVM transaction.</td>
+        </tr>
+      `;
+      return;
     }
-  }
 
-  function getStepNum(name) {
-    switch (name) {
-      case "telemetry": return "01";
-      case "merkle": return "02";
-      case "zkp": return "03";
-      case "vsat": return "04";
-      case "verifier": return "05";
-      case "blockchain": return "06";
-      default: return "01";
-    }
-  }
+    historyTableBody.innerHTML = records
+      .map((r, index) => {
+        const shortRoot = r.merkleRoot.length > 16 ? r.merkleRoot.slice(0, 10) + "..." + r.merkleRoot.slice(-6) : r.merkleRoot;
+        const shortTx = r.transactionHash ? r.transactionHash.slice(0, 10) + "..." + r.transactionHash.slice(-6) : "--";
+        const dateStr = r.verificationTimestamp ? new Date(r.verificationTimestamp).toLocaleString() : "--";
 
-  function resetPipeline() {
-    ["telemetry", "merkle", "zkp", "vsat", "verifier", "blockchain"].forEach((name) => {
-      setPipelineStepState(`step-${name}`, null, null);
+        return `
+          <tr data-index="${index}">
+            <td class="mono font-bold">${r.blockNumber || "--"}</td>
+            <td>${dateStr}</td>
+            <td class="mono highlight">${r.operationId}</td>
+            <td class="mono highlight">${r.windowId}</td>
+            <td class="mono">${shortRoot}</td>
+            <td class="mono">${r.ruleSetId}</td>
+            <td><span class="badge pass">✓ COMPLIANT</span></td>
+            <td class="mono">${shortTx}</td>
+            <td><button class="btn btn-secondary btn-sm btn-inspect" data-index="${index}">🔍 Inspect</button></td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    document.querySelectorAll(".btn-inspect").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = Number(btn.dataset.index);
+        showDetailModal(historyCache[idx]);
+      });
     });
   }
 
-  async function animatePipeline(isSuccess, data) {
-    resetPipeline();
-    const steps = [
-      { id: "step-telemetry", num: "01", time: "64 RECORDS" },
-      { id: "step-merkle", num: "02", time: "~12 ms" },
-      { id: "step-zkp", num: "03", time: `${data?.shipResult?.proofGenTimeMs || 1940} ms` },
-      { id: "step-vsat", num: "04", time: "1.10 KB" },
-      { id: "step-verifier", num: "05", time: "~31.5 ms" },
-    ];
-
-    for (const step of steps) {
-      setPipelineStepState(step.id, "active", "PROCESSING...");
-      await new Promise((r) => setTimeout(r, 140));
-      setPipelineStepState(step.id, "passed", step.time);
-    }
-
-    if (isSuccess) {
-      setPipelineStepState("step-blockchain", "passed", "CONFIRMED");
-    } else {
-      setPipelineStepState("step-verifier", "failed", "REJECTED");
-      setPipelineStepState("step-blockchain", null, "SKIPPED");
-    }
+  function showDetailModal(record) {
+    if (!record) return;
+    modalDetailJson.textContent = JSON.stringify(record, null, 2);
+    detailModal.classList.remove("hidden");
   }
 
-  function updateVSATMetricsUI(comparison) {
-    if (!comparison) return;
+  btnCloseDetail?.addEventListener("click", () => detailModal.classList.add("hidden"));
+  detailModal?.addEventListener("click", (e) => {
+    if (e.target === detailModal) detailModal.classList.add("hidden");
+  });
 
-    const rawBytes = comparison.rawTelemetryMetrics.rawPayloadBytes;
-    const zkBytes = comparison.verificationPackageMetrics.rawPayloadBytes;
-    const rawCompBytes = comparison.rawTelemetryMetrics.compressedPayloadBytes;
-    const zkCompBytes = comparison.verificationPackageMetrics.compressedPayloadBytes;
-
-    const rawKb = (rawBytes / 1024).toFixed(2);
-    const zkKb = (zkBytes / 1024).toFixed(2);
-
-    rawSizeDisplay.textContent = `${rawKb} KB (${rawCompBytes} B compressed)`;
-    zkSizeDisplay.textContent = `${zkKb} KB (${zkCompBytes} B compressed)`;
-
-    vsatRawKb.textContent = `${rawKb} KB`;
-    vsatRawComp.textContent = `${rawCompBytes} B compressed`;
-    vsatZkKb.textContent = `${zkKb} KB`;
-    vsatZkComp.textContent = `${zkCompBytes} B compressed`;
-
-    vsatSavingsPct.textContent = `${comparison.byteSavingsPercent}%`;
-    vsatSpeedup.textContent = `${comparison.speedupFactor}x`;
-
-    const zkPercent = Math.max(5, Math.min(100, (zkBytes / rawBytes) * 100));
-    vsatBarZk.style.width = `${zkPercent.toFixed(1)}%`;
-    vsatBarZk.textContent = `ZK Package (${zkKb} KB)`;
-    vsatBarText.textContent = `${zkKb} KB ZK Package vs ${rawKb} KB Raw Telemetry (${comparison.byteSavingsPercent}% Savings)`;
-  }
-
-  function renderResultUI(data) {
-    const { shipResult, comparison, verifierRecord, attackMode } = data;
-    currentVerificationPackage = shipResult?.verificationPackage || null;
-
-    // 1. Level 1 Focal Card Update
-    if (verifierRecord.status === "PASS") {
-      resFocalCard.className = "hero-result-card pass-state";
-      resStatusBadge.className = "result-badge pass";
-      resStatusBadge.textContent = "✓ ZKP VERIFIED";
-      resFocalTitle.textContent = "ZKP COMPLIANCE VERIFIED";
-      resSummaryText.textContent = "Complete 64-record telemetry window satisfies BWMS-DEMO-V1 prototype predicate.";
-      resRejectionBox.classList.add("hidden");
-    } else {
-      resFocalCard.className = "hero-result-card reject-state";
-      resStatusBadge.className = "result-badge reject";
-      resStatusBadge.textContent = "✕ VERIFICATION REJECTED";
-      resFocalTitle.textContent = "SECURITY MITIGATION TRIGGERED";
-      resSummaryText.textContent = "Verification failed to pass multi-layer security policy enforcement.";
-      resRejectionBox.classList.remove("hidden");
-      resRejectionReason.textContent = verifierRecord.reason || "Proof verification error";
-    }
-
-    const rootVal = verifierRecord.merkleRoot || "--";
-    resFocalRoot.textContent = rootVal;
-    evPublicRoot.textContent = rootVal;
-
-    // 2. VSAT Metrics Update
-    if (comparison) {
-      updateVSATMetricsUI(comparison);
-    }
-
-    // 3. Adversarial Lab Console Update
-    if (attackMode || verifierRecord.status === "REJECT") {
-      labAttackName.textContent = attackMode?.name || attackMode?.type || "Attack Simulation";
-      labActualBadge.textContent = verifierRecord.status;
-      labMitigationType.textContent = verifierRecord.mitigationType || "Application-Level Package Policy";
-      labReason.textContent = verifierRecord.reason || "Rejection enforced by verifier.";
-
-      if (verifierRecord.status === "REJECT") {
-        labMitigatedTag.className = "lab-tag mitigated";
-        labMitigatedTag.textContent = "✓ ATTACK MITIGATED";
-      } else {
-        labMitigatedTag.className = "lab-tag reject";
-        labMitigatedTag.textContent = "✕ UNMITIGATED";
-      }
-    }
-
-    // 4. Blockchain Attestation Update
-    chainOpId.textContent = verifierRecord.operationId || "--";
-    chainWinId.textContent = verifierRecord.windowId || "--";
-    chainMerkleRoot.textContent = rootVal;
-    chainRuleSet.textContent = verifierRecord.ruleSetId || "BWMS-DEMO-V1";
-    chainTimestamp.textContent = verifierRecord.verificationTimestamp || "--";
-
-    if (verifierRecord.attestationTxHash) {
-      chainStatusBadge.className = "chain-badge confirmed";
-      chainStatusBadge.textContent = "CONFIRMED";
-      chainTxHash.textContent = verifierRecord.attestationTxHash;
-    } else {
-      chainStatusBadge.className = "chain-badge idle";
-      chainStatusBadge.textContent = "NOT RECORDED";
-      chainTxHash.textContent = "None (Attestation skipped for rejected proof)";
-    }
-
-    // 5. Package Inspector Metadata
-    if (currentVerificationPackage) {
-      pkgCircuitId.textContent = currentVerificationPackage.circuit_id || "BWMS-TELEMETRY-64-GROTH16-V1";
-      pkgOpId.textContent = currentVerificationPackage.operation_id || "OP-000001";
-      pkgWinId.textContent = currentVerificationPackage.window_id || "WIN-000001";
-      pkgRuleSet.textContent = currentVerificationPackage.rule_set_id || "BWMS-DEMO-V1";
-    }
-  }
-
-  function showRawJsonModal() {
-    if (!currentVerificationPackage) {
-      modalJsonContent.textContent = "No package generated yet. Click 'RUN VERIFICATION' first.";
-    } else {
-      const displayPkg = {
-        circuit_id: currentVerificationPackage.circuit_id,
-        operation_id: currentVerificationPackage.operation_id,
-        window_id: currentVerificationPackage.window_id,
-        merkle_root: currentVerificationPackage.merkle_root,
-        public_inputs: currentVerificationPackage.public_inputs,
-        rule_set_id: currentVerificationPackage.rule_set_id,
-        generated_at: currentVerificationPackage.generated_at,
-        proof_system: "Groth16 / BN254",
-        raw_telemetry_transmitted: "0 records (Committed ordered window)",
-        proof: {
-          pi_a: [
-            currentVerificationPackage.proof?.pi_a?.[0]?.slice(0, 30) + "...",
-            currentVerificationPackage.proof?.pi_a?.[1]?.slice(0, 30) + "..."
-          ],
-          pi_b: [
-            [
-              currentVerificationPackage.proof?.pi_b?.[0]?.[0]?.slice(0, 20) + "...",
-              currentVerificationPackage.proof?.pi_b?.[0]?.[1]?.slice(0, 20) + "..."
-            ],
-            [
-              currentVerificationPackage.proof?.pi_b?.[1]?.[0]?.slice(0, 20) + "...",
-              currentVerificationPackage.proof?.pi_b?.[1]?.[1]?.slice(0, 20) + "..."
-            ]
-          ],
-          pi_c: [
-            currentVerificationPackage.proof?.pi_c?.[0]?.slice(0, 30) + "...",
-            currentVerificationPackage.proof?.pi_c?.[1]?.slice(0, 30) + "..."
-          ],
-          protocol: currentVerificationPackage.proof?.protocol || "groth16",
-          curve: currentVerificationPackage.proof?.curve || "bn128"
-        }
-      };
-      modalJsonContent.textContent = JSON.stringify(displayPkg, null, 2);
-    }
-    jsonModal.classList.remove("hidden");
-  }
-
-  // Event Listeners
-  btnRunValid.addEventListener("click", async () => {
-    btnRunValid.disabled = true;
+  // STEP 1: SHIP START OPERATION
+  btnShipOperate.addEventListener("click", async () => {
+    btnShipOperate.disabled = true;
     try {
-      const response = await fetch("/api/pipeline/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vsatConfig: getVsatConfig() }),
-      });
+      const response = await fetch("/api/ship/operate", { method: "POST" });
       const res = await response.json();
-      if (res.success) {
-        await animatePipeline(true, res.data);
-        renderResultUI(res.data);
+
+      if (res.success && res.data) {
+        const d = res.data;
+        shipOpId.textContent = d.vessel.operationId;
+        shipWinId.textContent = d.vessel.windowId;
+        shipTimestamp.textContent = d.vessel.timestamp;
+
+        sensFlow.innerHTML = `${(d.sensors.flowRate / 10).toFixed(1)} <span class="unit">m³/h</span>`;
+        sensUv.innerHTML = `${(d.sensors.uvIntensity / 10).toFixed(1)} <span class="unit">mW/cm²</span>`;
+        sensTemp.innerHTML = `${(d.sensors.temperature / 10).toFixed(1)} <span class="unit">°C</span>`;
+        sensSalinity.innerHTML = `${(d.sensors.salinity / 10).toFixed(1)} <span class="unit">PSU</span>`;
+        sensTurb.innerHTML = `${(d.sensors.turbidity / 10).toFixed(1)} <span class="unit">NTU</span>`;
+
+        // Animate Window Buildup
+        for (let i = 1; i <= 64; i += 8) {
+          winCounterText.textContent = `${i} / 64 RECORDS`;
+          winProgressFill.style.width = `${(i / 64) * 100}%`;
+          await new Promise((r) => setTimeout(r, 40));
+        }
+        winCounterText.textContent = `64 / 64 RECORDS`;
+        winProgressFill.style.width = `100%`;
+
+        // Update Integrity Check Badges
+        document.getElementById("chk-complete").className = "check-item passed";
+        document.getElementById("chk-seq").className = "check-item passed";
+        document.getElementById("chk-ts").className = "check-item passed";
+        document.getElementById("chk-op").className = "check-item passed";
+        document.getElementById("chk-win").className = "check-item passed";
+
+        shipMerkleRoot.textContent = d.merkleRoot;
+        btnShipProof.disabled = false;
       }
     } catch (err) {
-      alert("Failed to run verification pipeline: " + err.message);
+      alert("Failed to initialize ship operation: " + err.message);
     } finally {
-      btnRunValid.disabled = false;
+      btnShipOperate.disabled = false;
     }
   });
 
-  btnRunAttack.addEventListener("click", async () => {
-    btnRunAttack.disabled = true;
+  // STEP 2: GENERATE ZK PROOF
+  btnShipProof.addEventListener("click", async () => {
+    btnShipProof.disabled = true;
     try {
-      const attackType = attackSelect.value;
+      shipProofStatus.textContent = "GENERATING PROOF...";
+      shipProofStatus.className = "zk-v badge ready";
+
+      const response = await fetch("/api/ship/generate-proof", { method: "POST" });
+      const res = await response.json();
+
+      if (res.success && res.data) {
+        currentVerificationPackage = res.data.verificationPackage;
+        shipProofStatus.textContent = "✓ GROTH16 PROOF GENERATED";
+        shipProofStatus.className = "zk-v badge pass";
+        shipProofSize.textContent = res.data.proofSize;
+
+        btnShipTransmit.disabled = false;
+      }
+    } catch (err) {
+      shipProofStatus.textContent = "FAILED";
+      shipProofStatus.className = "zk-v badge reject";
+      alert("Failed to generate ZK proof: " + err.message);
+    } finally {
+      btnShipProof.disabled = false;
+    }
+  });
+
+  // STEP 3: TRANSMIT TO PORT
+  btnShipTransmit.addEventListener("click", async () => {
+    btnShipTransmit.disabled = true;
+    try {
+      const response = await fetch("/api/ship/transmit", { method: "POST" });
+      const res = await response.json();
+
+      if (res.success && res.data) {
+        const comp = res.data.comparison;
+        vsatRawSize.textContent = `${(comp.rawTelemetryMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
+        vsatZkSize.textContent = `${(comp.verificationPackageMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
+        vsatSavings.textContent = `${comp.byteSavingsPercent}%`;
+
+        // Update Port Console
+        portOpWin.textContent = `${currentVerificationPackage.operation_id} : ${currentVerificationPackage.window_id}`;
+        portPkgTime.textContent = currentVerificationPackage.generated_at;
+        portMerkleRoot.textContent = currentVerificationPackage.merkle_root;
+
+        // Auto Switch to Port Tab
+        navTabs[1].click();
+      }
+    } catch (err) {
+      alert("Failed to transmit verification package: " + err.message);
+    } finally {
+      btnShipTransmit.disabled = false;
+    }
+  });
+
+  // COPY MERKLE ROOT
+  btnCopyRoot?.addEventListener("click", () => {
+    const rootText = shipMerkleRoot.textContent;
+    if (rootText && !rootText.includes("--")) {
+      navigator.clipboard.writeText(rootText);
+      alert("Merkle root copied to clipboard!");
+    }
+  });
+
+  // PORT: RUN VERIFICATION PIPELINE
+  btnRunVerification.addEventListener("click", async () => {
+    btnRunVerification.disabled = true;
+    resetPipelineUI();
+
+    try {
+      const response = await fetch("/api/verifier/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verificationPackage: currentVerificationPackage }),
+      });
+      const res = await response.json();
+
+      if (res.success && res.data) {
+        currentVerifierRecord = res.data.verifierRecord;
+        await animatePipelineStages(currentVerifierRecord.status === "PASS");
+
+        if (currentVerifierRecord.status === "PASS") {
+          portResultBanner.className = "result-banner pass";
+          portBannerTitle.textContent = "✓ ZERO-KNOWLEDGE PROOF VERIFIED";
+          portBannerDesc.textContent = "Complete 64-record telemetry window satisfies BWMS-DEMO-V1 prototype predicate.";
+          btnRecordAttestation.disabled = false;
+        } else {
+          portResultBanner.className = "result-banner reject";
+          portBannerTitle.textContent = "✕ VERIFICATION FAILED";
+          portBannerDesc.textContent = currentVerifierRecord.reason || "Proof failed verification policy.";
+          btnRecordAttestation.disabled = true;
+        }
+      }
+    } catch (err) {
+      alert("Verification pipeline error: " + err.message);
+    } finally {
+      btnRunVerification.disabled = false;
+    }
+  });
+
+  function resetPipelineUI() {
+    for (let i = 1; i <= 6; i++) {
+      const el = document.getElementById(`pipe-stage-${i}`);
+      const st = document.getElementById(`pipe-status-${i}`);
+      if (el) el.className = "pipe-stage";
+      if (st) st.textContent = i === 6 ? "UNCOMMITTED" : "PENDING";
+    }
+    btnRecordAttestation.disabled = true;
+  }
+
+  async function animatePipelineStages(isPass) {
+    const stages = [1, 2, 3, 4, 5];
+    for (const st of stages) {
+      const el = document.getElementById(`pipe-stage-${st}`);
+      const statusEl = document.getElementById(`pipe-status-${st}`);
+      if (el) el.className = "pipe-stage active";
+      if (statusEl) statusEl.textContent = "RUNNING...";
+
+      await new Promise((r) => setTimeout(r, 120));
+
+      if (isPass || st < 4) {
+        if (el) el.className = "pipe-stage passed";
+        if (statusEl) statusEl.textContent = "PASSED";
+      } else {
+        if (el) el.className = "pipe-stage failed";
+        if (statusEl) statusEl.textContent = "FAILED";
+        break;
+      }
+    }
+  }
+
+  // PORT: RECORD ATTESTATION ON-CHAIN
+  btnRecordAttestation.addEventListener("click", async () => {
+    btnRecordAttestation.disabled = true;
+    resetTxLifecycleUI();
+
+    try {
+      txStepSubmit.className = "tx-step active";
+      await new Promise((r) => setTimeout(r, 150));
+      txStepBroadcast.className = "tx-step active";
+      await new Promise((r) => setTimeout(r, 150));
+      txStepPending.className = "tx-step active";
+
+      const response = await fetch("/api/blockchain/attest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verificationPackage: currentVerificationPackage }),
+      });
+      const res = await response.json();
+
+      if (res.success && res.data?.verifierRecord?.attestationTxHash) {
+        const rec = res.data.verifierRecord;
+        txStepConfirmed.className = "tx-step confirmed";
+        txHash.textContent = rec.attestationTxHash;
+        txBlockNum.textContent = rec.blockNumber || "1";
+        txContractAddr.textContent = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+        txVerifierAddr.textContent = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73";
+
+        const pipeStage6 = document.getElementById("pipe-stage-6");
+        const pipeStatus6 = document.getElementById("pipe-status-6");
+        if (pipeStage6) pipeStage6.className = "pipe-stage passed";
+        if (pipeStatus6) pipeStatus6.textContent = "CONFIRMED";
+
+        fetchBlockchainHistory();
+      } else {
+        alert("Blockchain attestation failed: " + (res.data?.verifierRecord?.reason || res.error || "Unknown EVM transaction failure"));
+      }
+    } catch (err) {
+      alert("Failed to submit blockchain attestation: " + err.message);
+    } finally {
+      btnRecordAttestation.disabled = false;
+    }
+  });
+
+  function resetTxLifecycleUI() {
+    [txStepSubmit, txStepBroadcast, txStepPending, txStepConfirmed].forEach((el) => {
+      if (el) el.className = "tx-step";
+    });
+    txHash.textContent = "--";
+    txBlockNum.textContent = "--";
+  }
+
+  // REFRESH HISTORY BUTTON
+  btnRefreshHistory?.addEventListener("click", fetchBlockchainHistory);
+
+  // SECURITY ATTACK LAB LOGIC
+  const attackDescriptions = {
+    proof_mutation: "Mutates Groth16 proof point (pi_a) to simulate elliptic curve proof forgery.",
+    root_mutation: "Alters the Poseidon Merkle root commitment to claim unverified telemetry data.",
+    unsupported_ruleset: "Submits proof under unauthorized rule set (BWMS-RELAXED-V0).",
+    stale_package: "Replays an expired verification package generated >24 hours ago.",
+    replay: "Replays an attestation window package that has already been verified and recorded on-chain.",
+    operation_mismatch: "Clears or alters operation_id in verification package metadata.",
+    window_mismatch: "Clears or alters window_id in verification package metadata.",
+  };
+
+  labAttackSelect?.addEventListener("change", () => {
+    const val = labAttackSelect.value;
+    attackDescText.textContent = attackDescriptions[val] || "Select an attack vector.";
+  });
+
+  btnRunAttackSimulation?.addEventListener("click", async () => {
+    btnRunAttackSimulation.disabled = true;
+    try {
+      const attackType = labAttackSelect.value;
       const response = await fetch("/api/pipeline/attack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attackType, vsatConfig: getVsatConfig() }),
+        body: JSON.stringify({ attackType }),
       });
       const res = await response.json();
-      if (res.success) {
-        await animatePipeline(false, res.data);
-        renderResultUI(res.data);
+
+      if (res.success && res.data) {
+        const d = res.data;
+        repAttackName.textContent = d.attackMode.name;
+        repActualResult.textContent = d.verifierRecord.status;
+        repActualResult.className = d.verifierRecord.status === "REJECT" ? "r-v badge reject" : "r-v badge pass";
+        repMitigationType.textContent = d.verifierRecord.mitigationType || "Application Policy";
+        repExpectedProperty.textContent = d.attackMode.expectedProperty;
+        repRejectionReason.textContent = d.verifierRecord.reason || "Verification rejected.";
+
+        if (d.verifierRecord.status === "REJECT") {
+          labMitigatedBadge.textContent = "✓ ATTACK MITIGATED";
+          labMitigatedBadge.className = "badge pass";
+        } else {
+          labMitigatedBadge.textContent = "✕ UNMITIGATED";
+          labMitigatedBadge.className = "badge reject";
+        }
       }
     } catch (err) {
-      alert("Failed to run attack simulation: " + err.message);
+      alert("Attack simulation error: " + err.message);
     } finally {
-      btnRunAttack.disabled = false;
+      btnRunAttackSimulation.disabled = false;
     }
-  });
-
-  btnScrollLab.addEventListener("click", () => {
-    document.getElementById("adversarial-lab").scrollIntoView({ behavior: "smooth" });
-  });
-
-  btnToggleConfig.addEventListener("click", () => {
-    vsatConfigDrawer.classList.toggle("hidden");
-  });
-
-  btnCloseConfig.addEventListener("click", () => {
-    vsatConfigDrawer.classList.add("hidden");
-  });
-
-  function showChainModal() {
-    const txHash = chainTxHash.textContent;
-    if (!txHash || txHash.includes("None")) {
-      modalChainContent.textContent = "No on-chain attestation recorded. Click 'RUN VERIFICATION' to generate a valid proof and issue an EVM attestation transaction.";
-    } else {
-      const displayChainState = {
-        network: "Hyperledger Besu / Permissioned QBFT Cluster",
-        chain_id: 1337,
-        contract_address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
-        transaction_hash: txHash,
-        status: "CONFIRMED",
-        attestation_data: {
-          operation_id: chainOpId.textContent,
-          window_id: chainWinId.textContent,
-          merkle_root: chainMerkleRoot.textContent,
-          rule_set_id: chainRuleSet.textContent,
-          compliant: true,
-          verification_timestamp: chainTimestamp.textContent,
-          proof_hash: "0xa4f89d8e12b74... (SHA-256 reference of Groth16 proof)",
-          verifier_address: "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
-        },
-        evm_storage_proof: {
-          mapping_key: `keccak256("${chainOpId.textContent}:${chainWinId.textContent}")`,
-          raw_telemetry_bytes_on_chain: 0
-        },
-        event_signature: "AttestationRecorded(bytes32,string,string,uint256,string,bool,uint256,bytes32,address)"
-      };
-      modalChainContent.textContent = JSON.stringify(displayChainState, null, 2);
-    }
-    chainModal.classList.remove("hidden");
-  }
-
-  btnOpenChainModal.addEventListener("click", showChainModal);
-
-  btnCloseChainModal.addEventListener("click", () => {
-    chainModal.classList.add("hidden");
-  });
-
-  chainModal.addEventListener("click", (e) => {
-    if (e.target === chainModal) chainModal.classList.add("hidden");
-  });
-
-  btnOpenPkgModal.addEventListener("click", showRawJsonModal);
-  btnViewJsonInline.addEventListener("click", showRawJsonModal);
-
-  btnCloseModal.addEventListener("click", () => {
-    jsonModal.classList.add("hidden");
-  });
-
-  jsonModal.addEventListener("click", (e) => {
-    if (e.target === jsonModal) jsonModal.classList.add("hidden");
   });
 });
