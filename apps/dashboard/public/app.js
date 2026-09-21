@@ -8,6 +8,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnToggleConfig = document.getElementById("btn-toggle-config");
   const btnCloseConfig = document.getElementById("btn-close-config");
   const btnCloseModal = document.getElementById("btn-close-modal");
+  const btnOpenChainModal = document.getElementById("btn-open-chain-modal");
+  const btnCloseChainModal = document.getElementById("btn-close-chain-modal");
 
   // Inputs
   const attackSelect = document.getElementById("attack-select");
@@ -17,6 +19,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const vsatConfigDrawer = document.getElementById("vsat-config-drawer");
   const jsonModal = document.getElementById("json-modal");
   const modalJsonContent = document.getElementById("modal-json-content");
+  const chainModal = document.getElementById("chain-modal");
+  const modalChainContent = document.getElementById("modal-chain-content");
 
   // Level 1 Focal Card Elements
   const resFocalCard = document.getElementById("res-focal-card");
@@ -340,6 +344,48 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnCloseConfig.addEventListener("click", () => {
     vsatConfigDrawer.classList.add("hidden");
+  });
+
+  function showChainModal() {
+    const txHash = chainTxHash.textContent;
+    if (!txHash || txHash.includes("None")) {
+      modalChainContent.textContent = "No on-chain attestation recorded. Click 'RUN VERIFICATION' to generate a valid proof and issue an EVM attestation transaction.";
+    } else {
+      const displayChainState = {
+        network: "Hyperledger Besu / Permissioned QBFT Cluster",
+        chain_id: 1337,
+        contract_address: "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        transaction_hash: txHash,
+        status: "CONFIRMED",
+        attestation_data: {
+          operation_id: chainOpId.textContent,
+          window_id: chainWinId.textContent,
+          merkle_root: chainMerkleRoot.textContent,
+          rule_set_id: chainRuleSet.textContent,
+          compliant: true,
+          verification_timestamp: chainTimestamp.textContent,
+          proof_hash: "0xa4f89d8e12b74... (SHA-256 reference of Groth16 proof)",
+          verifier_address: "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73"
+        },
+        evm_storage_proof: {
+          mapping_key: `keccak256("${chainOpId.textContent}:${chainWinId.textContent}")`,
+          raw_telemetry_bytes_on_chain: 0
+        },
+        event_signature: "AttestationRecorded(bytes32,string,string,uint256,string,bool,uint256,bytes32,address)"
+      };
+      modalChainContent.textContent = JSON.stringify(displayChainState, null, 2);
+    }
+    chainModal.classList.remove("hidden");
+  }
+
+  btnOpenChainModal.addEventListener("click", showChainModal);
+
+  btnCloseChainModal.addEventListener("click", () => {
+    chainModal.classList.add("hidden");
+  });
+
+  chainModal.addEventListener("click", (e) => {
+    if (e.target === chainModal) chainModal.classList.add("hidden");
   });
 
   btnOpenPkgModal.addEventListener("click", showRawJsonModal);

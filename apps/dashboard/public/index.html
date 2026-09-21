@@ -515,6 +515,10 @@
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
               <span>ZKP Verification and Blockchain Attestation are distinct stages. Attestations are only submitted after successful cryptographic proof verification.</span>
             </div>
+            
+            <button id="btn-open-chain-modal" class="btn btn-secondary btn-sm" style="margin-top: 14px; width: 100%; justify-content: center;">
+              🔍 INSPECT ON-CHAIN AUDIT TRAIL & STATE
+            </button>
           </div>
         </section>
 
@@ -591,6 +595,36 @@
           🛡️ PRIVACY GUARANTEE: Raw telemetry transmitted = 0 records.
         </div>
         <pre id="modal-json-content" class="code-block mono">No package generated yet.</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- BLOCKCHAIN AUDIT INSPECTOR MODAL -->
+  <div id="chain-modal" class="modal-overlay hidden">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⛓️ Permissioned EVM Smart Contract Audit State (BWMSAttestation.sol)</h3>
+        <button id="btn-close-chain-modal" class="btn-close">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-note">
+          ⛓️ ON-CHAIN PRIVACY GUARANTEE: Zero raw telemetry stored on EVM storage. Only public root commitment & proof reference are immutably logged.
+        </div>
+        <div class="package-meta-grid" style="margin-bottom: 16px;">
+          <div class="pkg-item">
+            <span class="pkg-k">Contract Address</span>
+            <span class="pkg-v mono highlight">0x5FbDB2315678afecb367f032d93F642f64180aa3</span>
+          </div>
+          <div class="pkg-item">
+            <span class="pkg-k">Network Protocol</span>
+            <span class="pkg-v mono">Hyperledger Besu (QBFT 4-Node Cluster)</span>
+          </div>
+          <div class="pkg-item">
+            <span class="pkg-k">Chain ID / Block Time</span>
+            <span class="pkg-v mono">1337 / 2.0s Finality</span>
+          </div>
+        </div>
+        <pre id="modal-chain-content" class="code-block mono">No on-chain attestation recorded yet. Run a valid verification pipeline first.</pre>
       </div>
     </div>
   </div>
