@@ -33,6 +33,153 @@ document.addEventListener("DOMContentLoaded", () => {
   const winProgressFill = document.getElementById("win-progress-fill");
   const shipMerkleRoot = document.getElementById("ship-merkle-root");
   const shipProofStatus = document.getElementById("ship-proof-status");
+  const shipProofSize = document.getElementById("ship-proof-size");
+
+  const vsatRawSize = document.getElementById("vsat-raw-size");
+  const vsatZkSize = document.getElementById("vsat-zk-size");
+  const vsatSavings = document.getElementById("vsat-savings");
+
+  // Port Verification Controls & UI Elements
+  const portOpWin = document.getElementById("port-op-win");
+  const portPkgTime = document.getElementById("port-pkg-time");
+  const portMerkleRoot = document.getElementById("port-merkle-root");
+  const btnRunVerification = document.getElementById("btn-run-verification");
+  const btnRecordAttestation = document.getElementById("btn-record-attestation");
+  const portResultBanner = document.getElementById("port-result-banner");
+  const portBannerTitle = document.getElementById("port-banner-title");
+  const portBannerDesc = document.getElementById("port-banner-desc");
+
+  // Transaction Lifecycle Elements
+  const txStepSubmit = document.getElementById("tx-step-submit");
+  const txStepBroadcast = document.getElementById("tx-step-broadcast");
+  const txStepPending = document.getElementById("tx-step-pending");
+  const txStepConfirmed = document.getElementById("tx-step-confirmed");
+  const txHash = document.getElementById("tx-hash");
+  const txBlockNum = document.getElementById("tx-block-num");
+  const txContractAddr = document.getElementById("tx-contract-addr");
+  const txVerifierAddr = document.getElementById("tx-verifier-addr");
+
+  // Blockchain History Elements
+  const btnRefreshHistory = document.getElementById("btn-refresh-history");
+  const histContract = document.getElementById("hist-contract");
+  const histTotalCount = document.getElementById("hist-total-count");
+  const historyTableBody = document.getElementById("history-table-body");
+  const headerChainStatus = document.getElementById("header-chain-status");
+
+  // Security Lab Controls & UI Elements
+  const labAttackSelect = document.getElementById("lab-attack-select");
+  const attackDescText = document.getElementById("attack-desc-text");
+  const btnRunAttackSimulation = document.getElementById("btn-run-attack-simulation");
+  const repAttackName = document.getElementById("rep-attack-name");
+  const repActualResult = document.getElementById("rep-actual-result");
+  const repMitigationType = document.getElementById("rep-mitigation-type");
+  const repExpectedProperty = document.getElementById("rep-expected-property");
+  const repRejectionReason = document.getElementById("rep-rejection-reason");
+  const labMitigatedBadge = document.getElementById("lab-mitigated-badge");
+
+  // Modal Elements
+  const detailModal = document.getElementById("detail-modal");
+  const btnCloseDetail = document.getElementById("btn-close-detail");
+  const modalDetailJson = document.getElementById("modal-detail-json");
+
+  let currentVerificationPackage = null;
+  let currentVerifierRecord = null;
+  let historyCache = [];
+
+  // TAB SWITCHING LOGIC (SHIP ZKP CONSOLE, PORT VERIFICATION, BLOCKCHAIN HISTORY, SECURITY LAB)
+  navTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const targetTab = tab.dataset.tab;
+      navTabs.forEach((t) => t.classList.remove("active"));
+      tabPanes.forEach((p) => p.classList.remove("active"));
+
+      tab.classList.add("active");
+      const pane = document.getElementById(targetTab);
+      if (pane) pane.classList.add("active");
+
+      if (targetTab === "tab-history") {
+        fetchBlockchainHistory();
+      }
+    });
+  });
+
+  // INITIALIZE BLOCKCHAIN STATUS & HISTORY ON LOAD
+  fetchBlockchainHistory();
+
+  async function fetchBlockchainHistory() {
+    try {
+      const res = await fetch("/api/blockchain/history");
+      const json = await res.json();
+
+      if (json.success && json.data) {
+        const d = json.data;
+        if (headerChainStatus) {
+          headerChainStatus.textContent = d.connected ? "CONNECTED" : "OFFLINE";
+          headerChainStatus.className = d.connected ? "pill-value text-green" : "pill-value";
+        }
+        if (histContract) histContract.textContent = d.contractAddress || "--";
+        if (histTotalCount) histTotalCount.textContent = d.totalAttestations || "0";
+        historyCache = d.history || [];
+
+        renderHistoryTable(historyCache);
+      }
+    } catch {
+      if (headerChainStatus) headerChainStatus.textContent = "DISCONNECTED";
+    }
+  }
+
+  function renderHistoryTable(records) {
+    if (!historyTableBody) return;
+    if (!records || records.length === 0) {
+      historyTableBody.innerHTML = `
+        <tr>
+          <td colspan="9" class="empty-row">No on-chain attestations recorded yet. Execute a valid ship & verifier workflow to issue an EVM transaction.</td>
+        </tr>
+      `;
+      return;
+    }
+
+    historyTableBody.innerHTML = records
+      .map((r, index) => {
+        const shortRoot = r.merkleRoot && r.merkleRoot.length > 16 ? r.merkleRoot.slice(0, 10) + "..." + r.merkleRoot.slice(-6) : (r.merkleRoot || "--");
+        const shortTx = r.transactionHash ? r.transactionHash.slice(0, 10) + "..." + r.transactionHash.slice(-6) : "--";
+        const dateStr = r.verificationTimestamp ? new Date(r.verificationTimestamp).toLocaleString() : "--";
+
+        return `
+          <tr data-index="${index}">
+            <td class="mono font-bold">${r.blockNumber ?? "--"}</td>
+            <td>${dateStr}</td>
+            <td class="mono highlight">${r.operationId || "--"}</td>
+            <td class="mono highlight">${r.windowId || "--"}</td>
+            <td class="mono">${shortRoot}</td>
+            <td class="mono">${r.ruleSetId || "--"}</td>
+            <td><span class="badge pass">✓ COMPLIANT</span></td>
+            <td class="mono">${shortTx}</td>
+            <td><button class="btn btn-secondary btn-sm btn-inspect" data-index="${index}">🔍 Inspect</button></td>
+          </tr>
+        `;
+      })
+      .join("");
+
+    document.querySelectorAll(".btn-inspect").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const idx = Number(btn.dataset.index);
+        showDetailModal(historyCache[idx]);
+      });
+    });
+  }
+
+  function showDetailModal(record) {
+    if (!record || !modalDetailJson || !detailModal) return;
+    modalDetailJson.textContent = JSON.stringify(record, null, 2);
+    detailModal.classList.remove("hidden");
+  }
+
+  btnCloseDetail?.addEventListener("click", () => detailModal?.classList.add("hidden"));
+  detailModal?.addEventListener("click", (e) => {
+    if (e.target === detailModal) detailModal.classList.add("hidden");
+  });
 
   // Scenario Descriptions
   const scenarioNotes = {
@@ -48,21 +195,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
   shipScenarioSelect?.addEventListener("change", () => {
     const scenario = shipScenarioSelect.value;
-    scenarioNoteText.textContent = scenarioNotes[scenario] || "Simulates telemetry under specified operational scenario.";
+    if (scenarioNoteText) {
+      scenarioNoteText.textContent = scenarioNotes[scenario] || "Simulates telemetry under specified operational scenario.";
+    }
   });
 
   // STEP 1: SHIP START OPERATION & INCREMENTAL SENSOR STREAMING
-  btnShipOperate.addEventListener("click", async () => {
+  btnShipOperate?.addEventListener("click", async () => {
     btnShipOperate.disabled = true;
-    btnShipProof.disabled = true;
-    btnShipTransmit.disabled = true;
+    if (btnShipProof) btnShipProof.disabled = true;
+    if (btnShipTransmit) btnShipTransmit.disabled = true;
     if (shipScenarioSelect) shipScenarioSelect.disabled = true;
 
     // Reset UI State
-    telemetryTableBody.innerHTML = `<tr><td colspan="7" class="empty-row">Initializing sensor simulation stream...</td></tr>`;
-    shipMerkleRoot.textContent = "-- (Collecting Telemetry...)";
-    shipProofStatus.textContent = "SAMPLING IN PROGRESS";
-    shipProofStatus.className = "zk-v badge ready";
+    if (telemetryTableBody) {
+      telemetryTableBody.innerHTML = `<tr><td colspan="7" class="empty-row">Initializing sensor simulation stream...</td></tr>`;
+    }
+    if (shipMerkleRoot) shipMerkleRoot.textContent = "-- (Collecting Telemetry...)";
+    if (shipProofStatus) {
+      shipProofStatus.textContent = "SAMPLING IN PROGRESS";
+      shipProofStatus.className = "zk-v badge ready";
+    }
 
     resetSensorCards();
     resetChecklist();
@@ -83,10 +236,10 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       const initialSession = initJson.data.sessionState;
-      shipOpId.textContent = initialSession.operationId;
-      shipWinId.textContent = initialSession.windowId;
+      if (shipOpId) shipOpId.textContent = initialSession.operationId;
+      if (shipWinId) shipWinId.textContent = initialSession.windowId;
 
-      telemetryTableBody.innerHTML = "";
+      if (telemetryTableBody) telemetryTableBody.innerHTML = "";
 
       // 2. Step Loop: Collect 64 Readings Incrementally
       let currentState = initialSession.state;
@@ -110,58 +263,77 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const count = sessionData.currentReadingCount;
-        winCounterText.textContent = `${count} / 64 RECORDS`;
-        winProgressFill.style.width = `${(count / 64) * 100}%`;
+        if (winCounterText) winCounterText.textContent = `${count} / 64 RECORDS`;
+        if (winProgressFill) winProgressFill.style.width = `${(count / 64) * 100}%`;
         if (sensorSampleBadge) sensorSampleBadge.textContent = `SEQUENCE ${count} / 64`;
 
         // Small interval to make incremental collection visible to user
-        await new Promise((r) => setTimeout(r, 120));
+        await new Promise((r) => setTimeout(r, 100));
       }
 
       // 3. Finalize UI based on Sealing & Compliance outcome
       if (currentState === "SEALED") {
-        shipTimestamp.textContent = sessionData.readings[sessionData.readings.length - 1]?.timestamp || new Date().toISOString();
-        shipMerkleRoot.textContent = sessionData.merkleRoot || "--";
+        if (shipTimestamp) {
+          shipTimestamp.textContent = sessionData.readings[sessionData.readings.length - 1]?.timestamp || new Date().toISOString();
+        }
+        if (shipMerkleRoot) shipMerkleRoot.textContent = sessionData.merkleRoot || "--";
 
-        document.getElementById("chk-complete").className = "check-item passed";
-        document.getElementById("chk-seq").className = "check-item passed";
-        document.getElementById("chk-ts").className = "check-item passed";
+        const chkComplete = document.getElementById("chk-complete");
+        const chkSeq = document.getElementById("chk-seq");
+        const chkTs = document.getElementById("chk-ts");
+        if (chkComplete) chkComplete.className = "check-item passed";
+        if (chkSeq) chkSeq.className = "check-item passed";
+        if (chkTs) chkTs.className = "check-item passed";
 
         const chkCompliance = document.getElementById("chk-compliance");
         if (sessionData.isCompliant) {
           if (chkCompliance) {
             chkCompliance.className = "check-item passed";
-            chkCompliance.querySelector(".chk-label").textContent = "BWMS-DEMO-V1 Compliant ✓";
+            const label = chkCompliance.querySelector(".chk-label");
+            if (label) label.textContent = "BWMS-DEMO-V1 Compliant ✓";
           }
-          shipProofStatus.textContent = "READY TO GENERATE PROOF";
-          shipProofStatus.className = "zk-v badge pass";
-          btnShipProof.disabled = false;
+          if (shipProofStatus) {
+            shipProofStatus.textContent = "READY TO GENERATE PROOF";
+            shipProofStatus.className = "zk-v badge pass";
+          }
+          if (btnShipProof) btnShipProof.disabled = false;
         } else {
           if (chkCompliance) {
             chkCompliance.className = "check-item";
             chkCompliance.style.borderColor = "var(--red-border)";
             chkCompliance.style.background = "var(--red-dim)";
             chkCompliance.style.color = "var(--red-failed)";
-            chkCompliance.querySelector(".chk-label").textContent = "BWMS-DEMO-V1 Violation ✕";
+            const label = chkCompliance.querySelector(".chk-label");
+            if (label) label.textContent = "BWMS-DEMO-V1 Violation ✕";
           }
-          shipProofStatus.textContent = "NON-COMPLIANT (PROOF BLOCKED)";
-          shipProofStatus.className = "zk-v badge reject";
-          btnShipProof.disabled = true;
+          if (shipProofStatus) {
+            shipProofStatus.textContent = "NON-COMPLIANT (PROOF BLOCKED)";
+            shipProofStatus.className = "zk-v badge reject";
+          }
+          if (btnShipProof) btnShipProof.disabled = true;
         }
       } else if (currentState === "FAILED") {
-        shipMerkleRoot.textContent = "SIMULATION FAILED";
-        shipProofStatus.textContent = "FAILED (SEQUENCE GAP)";
-        shipProofStatus.className = "zk-v badge reject";
+        if (shipMerkleRoot) shipMerkleRoot.textContent = "SIMULATION FAILED";
+        if (shipProofStatus) {
+          shipProofStatus.textContent = "FAILED (SEQUENCE GAP)";
+          shipProofStatus.className = "zk-v badge reject";
+        }
 
-        document.getElementById("chk-seq").style.borderColor = "var(--red-border)";
-        document.getElementById("chk-seq").style.background = "var(--red-dim)";
-        document.getElementById("chk-seq").style.color = "var(--red-failed)";
-        document.getElementById("chk-seq").querySelector(".chk-label").textContent = "Sequence Integrity Failure ✕";
+        const chkSeq = document.getElementById("chk-seq");
+        if (chkSeq) {
+          chkSeq.style.borderColor = "var(--red-border)";
+          chkSeq.style.background = "var(--red-dim)";
+          chkSeq.style.color = "var(--red-failed)";
+          const label = chkSeq.querySelector(".chk-label");
+          if (label) label.textContent = "Sequence Integrity Failure ✕";
+        }
       }
     } catch (err) {
       alert("Ship sensor simulation error: " + err.message);
-      shipProofStatus.textContent = "ERROR";
-      shipProofStatus.className = "zk-v badge reject";
+      if (shipProofStatus) {
+        shipProofStatus.textContent = "ERROR";
+        shipProofStatus.className = "zk-v badge reject";
+      }
     } finally {
       btnShipOperate.disabled = false;
       if (shipScenarioSelect) shipScenarioSelect.disabled = false;
@@ -184,25 +356,37 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  function getField(r, propCamel, propSnake) {
+    if (r && typeof r[propSnake] === "number") return r[propSnake];
+    if (r && typeof r[propCamel] === "number") return r[propCamel];
+    return undefined;
+  }
+
   function updateSensorGauges(r) {
-    const flowM3 = (r.flowRate / 10).toFixed(1);
-    const uvMw = (r.uvIntensity / 10).toFixed(1);
-    const tempC = (r.temperature / 10).toFixed(1);
-    const salPsu = (r.salinity / 10).toFixed(1);
-    const turbNtu = (r.turbidity / 10).toFixed(1);
+    const flowVal = getField(r, "flowRate", "flow_rate");
+    const uvVal = getField(r, "uvIntensity", "uv_intensity");
+    const tempVal = getField(r, "temperature", "temperature");
+    const salVal = getField(r, "salinity", "salinity");
+    const turbVal = getField(r, "turbidity", "turbidity");
 
-    sensFlow.innerHTML = `${flowM3} <span class="unit">m³/h</span>`;
-    sensUv.innerHTML = `${uvMw} <span class="unit">mW/cm²</span>`;
-    sensTemp.innerHTML = `${tempC} <span class="unit">°C</span>`;
-    sensSalinity.innerHTML = `${salPsu} <span class="unit">PSU</span>`;
-    sensTurb.innerHTML = `${turbNtu} <span class="unit">NTU</span>`;
+    const flowM3 = typeof flowVal === "number" ? flowVal.toFixed(1) : "--";
+    const uvMw = typeof uvVal === "number" ? uvVal.toFixed(1) : "--";
+    const tempC = typeof tempVal === "number" ? tempVal.toFixed(1) : "--";
+    const salPsu = typeof salVal === "number" ? salVal.toFixed(1) : "--";
+    const turbNtu = typeof turbVal === "number" ? turbVal.toFixed(1) : "--";
 
-    // Check violations against BWMS-DEMO-V1 bounds
-    const flowViolated = r.flowRate < 8000;
-    const uvViolated = r.uvIntensity < 400;
-    const tempViolated = r.temperature < 200 || r.temperature > 300;
-    const salViolated = r.salinity < 250 || r.salinity > 350;
-    const turbViolated = r.turbidity > 50;
+    if (sensFlow) sensFlow.innerHTML = `${flowM3} <span class="unit">m³/h</span>`;
+    if (sensUv) sensUv.innerHTML = `${uvMw} <span class="unit">mW/cm²</span>`;
+    if (sensTemp) sensTemp.innerHTML = `${tempC} <span class="unit">°C</span>`;
+    if (sensSalinity) sensSalinity.innerHTML = `${salPsu} <span class="unit">PSU</span>`;
+    if (sensTurb) sensTurb.innerHTML = `${turbNtu} <span class="unit">NTU</span>`;
+
+    // Check violations against BWMS-DEMO-V1 compliance thresholds
+    const flowViolated = typeof flowVal === "number" && flowVal < 800.0;
+    const uvViolated = typeof uvVal === "number" && uvVal < 40.0;
+    const tempViolated = typeof tempVal === "number" && (tempVal < 20.0 || tempVal > 30.0);
+    const salViolated = typeof salVal === "number" && (salVal < 25.0 || salVal > 35.0);
+    const turbViolated = typeof turbVal === "number" && turbVal > 5.0;
 
     if (cardFlow) cardFlow.classList.toggle("violation", flowViolated);
     if (cardUv) cardUv.classList.toggle("violation", uvViolated);
@@ -212,56 +396,79 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function appendTelemetryRow(r) {
+    if (!telemetryTableBody) return;
     const container = document.querySelector(".rolling-table-container");
-    const isViolating = r.flowRate < 8000 || r.uvIntensity < 400 || r.temperature < 200 || r.temperature > 300 || r.salinity < 250 || r.salinity > 350 || r.turbidity > 50;
+
+    const flowVal = getField(r, "flowRate", "flow_rate");
+    const uvVal = getField(r, "uvIntensity", "uv_intensity");
+    const tempVal = getField(r, "temperature", "temperature");
+    const salVal = getField(r, "salinity", "salinity");
+    const turbVal = getField(r, "turbidity", "turbidity");
+    const seqVal = r.sequence ?? r.sequenceNumber ?? "--";
+
+    const flowViolated = typeof flowVal === "number" && flowVal < 800.0;
+    const uvViolated = typeof uvVal === "number" && uvVal < 40.0;
+    const tempViolated = typeof tempVal === "number" && (tempVal < 20.0 || tempVal > 30.0);
+    const salViolated = typeof salVal === "number" && (salVal < 25.0 || salVal > 35.0);
+    const turbViolated = typeof turbVal === "number" && turbVal > 5.0;
+
+    const isViolating = flowViolated || uvViolated || tempViolated || salViolated || turbViolated;
 
     const row = document.createElement("tr");
     if (isViolating) row.className = "violating-row";
 
-    const flowStr = (r.flowRate / 10).toFixed(1);
-    const uvStr = (r.uvIntensity / 10).toFixed(1);
-    const tempStr = (r.temperature / 10).toFixed(1);
-    const salStr = (r.salinity / 10).toFixed(1);
-    const turbStr = (r.turbidity / 10).toFixed(1);
+    const flowStr = typeof flowVal === "number" ? flowVal.toFixed(1) : "--";
+    const uvStr = typeof uvVal === "number" ? uvVal.toFixed(1) : "--";
+    const tempStr = typeof tempVal === "number" ? tempVal.toFixed(1) : "--";
+    const salStr = typeof salVal === "number" ? salVal.toFixed(1) : "--";
+    const turbStr = typeof turbVal === "number" ? turbVal.toFixed(1) : "--";
 
-    const tsTime = r.timestamp.includes("T") ? r.timestamp.split("T")[1].replace("Z", "") : r.timestamp;
+    const tsTime = r.timestamp && r.timestamp.includes("T") ? r.timestamp.split("T")[1].replace("Z", "") : (r.timestamp || "--");
 
     row.innerHTML = `
-      <td class="mono font-bold">${r.sequenceNumber}</td>
+      <td class="mono font-bold">${seqVal}</td>
       <td class="mono">${tsTime}</td>
-      <td class="${r.flowRate < 8000 ? "cell-violation" : ""}">${flowStr}</td>
-      <td class="${r.uvIntensity < 400 ? "cell-violation" : ""}">${uvStr}</td>
-      <td class="${r.temperature < 200 || r.temperature > 300 ? "cell-violation" : ""}">${tempStr}</td>
-      <td class="${r.salinity < 250 || r.salinity > 350 ? "cell-violation" : ""}">${salStr}</td>
-      <td class="${r.turbidity > 50 ? "cell-violation" : ""}">${turbStr}</td>
+      <td class="${flowViolated ? "cell-violation" : ""}">${flowStr}</td>
+      <td class="${uvViolated ? "cell-violation" : ""}">${uvStr}</td>
+      <td class="${tempViolated ? "cell-violation" : ""}">${tempStr}</td>
+      <td class="${salViolated ? "cell-violation" : ""}">${salStr}</td>
+      <td class="${turbViolated ? "cell-violation" : ""}">${turbStr}</td>
     `;
 
     telemetryTableBody.appendChild(row);
     if (container) container.scrollTop = container.scrollHeight;
   }
 
-
   // STEP 2: GENERATE ZK PROOF
-  btnShipProof.addEventListener("click", async () => {
+  btnShipProof?.addEventListener("click", async () => {
     btnShipProof.disabled = true;
     try {
-      shipProofStatus.textContent = "GENERATING PROOF...";
-      shipProofStatus.className = "zk-v badge ready";
+      if (shipProofStatus) {
+        shipProofStatus.textContent = "GENERATING PROOF...";
+        shipProofStatus.className = "zk-v badge ready";
+      }
 
       const response = await fetch("/api/ship/generate-proof", { method: "POST" });
       const res = await response.json();
 
       if (res.success && res.data) {
         currentVerificationPackage = res.data.verificationPackage;
-        shipProofStatus.textContent = "✓ GROTH16 PROOF GENERATED";
-        shipProofStatus.className = "zk-v badge pass";
-        shipProofSize.textContent = res.data.proofSize;
-
-        btnShipTransmit.disabled = false;
+        if (shipProofStatus) {
+          shipProofStatus.textContent = "✓ GROTH16 PROOF GENERATED";
+          shipProofStatus.className = "zk-v badge pass";
+        }
+        if (shipProofSize) {
+          shipProofSize.textContent = res.data.proofSize || "805 bytes";
+        }
+        if (btnShipTransmit) btnShipTransmit.disabled = false;
+      } else {
+        throw new Error(res.error || "Failed to generate ZK proof.");
       }
     } catch (err) {
-      shipProofStatus.textContent = "FAILED";
-      shipProofStatus.className = "zk-v badge reject";
+      if (shipProofStatus) {
+        shipProofStatus.textContent = "FAILED";
+        shipProofStatus.className = "zk-v badge reject";
+      }
       alert("Failed to generate ZK proof: " + err.message);
     } finally {
       btnShipProof.disabled = false;
@@ -269,7 +476,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // STEP 3: TRANSMIT TO PORT
-  btnShipTransmit.addEventListener("click", async () => {
+  btnShipTransmit?.addEventListener("click", async () => {
     btnShipTransmit.disabled = true;
     try {
       const response = await fetch("/api/ship/transmit", { method: "POST" });
@@ -277,17 +484,21 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (res.success && res.data) {
         const comp = res.data.comparison;
-        vsatRawSize.textContent = `${(comp.rawTelemetryMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
-        vsatZkSize.textContent = `${(comp.verificationPackageMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
-        vsatSavings.textContent = `${comp.byteSavingsPercent}%`;
+        if (vsatRawSize) vsatRawSize.textContent = `${(comp.rawTelemetryMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
+        if (vsatZkSize) vsatZkSize.textContent = `${(comp.verificationPackageMetrics.rawPayloadBytes / 1024).toFixed(2)} KB`;
+        if (vsatSavings) vsatSavings.textContent = `${comp.byteSavingsPercent}%`;
 
-        // Update Port Console
-        portOpWin.textContent = `${currentVerificationPackage.operation_id} : ${currentVerificationPackage.window_id}`;
-        portPkgTime.textContent = currentVerificationPackage.generated_at;
-        portMerkleRoot.textContent = currentVerificationPackage.merkle_root;
+        // Update Port Console Payload Header
+        if (currentVerificationPackage) {
+          if (portOpWin) portOpWin.textContent = `${currentVerificationPackage.operation_id} : ${currentVerificationPackage.window_id}`;
+          if (portPkgTime) portPkgTime.textContent = currentVerificationPackage.generated_at;
+          if (portMerkleRoot) portMerkleRoot.textContent = currentVerificationPackage.merkle_root;
+        }
 
         // Auto Switch to Port Tab
-        navTabs[1].click();
+        if (navTabs[1]) navTabs[1].click();
+      } else {
+        throw new Error(res.error || "Transmission failed.");
       }
     } catch (err) {
       alert("Failed to transmit verification package: " + err.message);
@@ -296,9 +507,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // COPY MERKLE ROOT
+  // COPY MERKLE ROOT BUTTON
   btnCopyRoot?.addEventListener("click", () => {
-    const rootText = shipMerkleRoot.textContent;
+    const rootText = shipMerkleRoot ? shipMerkleRoot.textContent : "";
     if (rootText && !rootText.includes("--")) {
       navigator.clipboard.writeText(rootText);
       alert("Merkle root copied to clipboard!");
@@ -306,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // PORT: RUN VERIFICATION PIPELINE
-  btnRunVerification.addEventListener("click", async () => {
+  btnRunVerification?.addEventListener("click", async () => {
     btnRunVerification.disabled = true;
     resetPipelineUI();
 
@@ -323,16 +534,18 @@ document.addEventListener("DOMContentLoaded", () => {
         await animatePipelineStages(currentVerifierRecord.status === "PASS");
 
         if (currentVerifierRecord.status === "PASS") {
-          portResultBanner.className = "result-banner pass";
-          portBannerTitle.textContent = "✓ ZERO-KNOWLEDGE PROOF VERIFIED";
-          portBannerDesc.textContent = "Complete 64-record telemetry window satisfies BWMS-DEMO-V1 prototype predicate.";
-          btnRecordAttestation.disabled = false;
+          if (portResultBanner) portResultBanner.className = "result-banner pass";
+          if (portBannerTitle) portBannerTitle.textContent = "✓ ZERO-KNOWLEDGE PROOF VERIFIED";
+          if (portBannerDesc) portBannerDesc.textContent = "Complete 64-record telemetry window satisfies BWMS-DEMO-V1 prototype predicate.";
+          if (btnRecordAttestation) btnRecordAttestation.disabled = false;
         } else {
-          portResultBanner.className = "result-banner reject";
-          portBannerTitle.textContent = "✕ VERIFICATION FAILED";
-          portBannerDesc.textContent = currentVerifierRecord.reason || "Proof failed verification policy.";
-          btnRecordAttestation.disabled = true;
+          if (portResultBanner) portResultBanner.className = "result-banner reject";
+          if (portBannerTitle) portBannerTitle.textContent = "✕ VERIFICATION FAILED";
+          if (portBannerDesc) portBannerDesc.textContent = currentVerifierRecord.reason || "Proof failed verification policy.";
+          if (btnRecordAttestation) btnRecordAttestation.disabled = true;
         }
+      } else {
+        throw new Error(res.error || "Verification pipeline failed.");
       }
     } catch (err) {
       alert("Verification pipeline error: " + err.message);
@@ -348,7 +561,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (el) el.className = "pipe-stage";
       if (st) st.textContent = i === 6 ? "UNCOMMITTED" : "PENDING";
     }
-    btnRecordAttestation.disabled = true;
+    if (btnRecordAttestation) btnRecordAttestation.disabled = true;
   }
 
   async function animatePipelineStages(isPass) {
@@ -373,16 +586,16 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // PORT: RECORD ATTESTATION ON-CHAIN
-  btnRecordAttestation.addEventListener("click", async () => {
+  btnRecordAttestation?.addEventListener("click", async () => {
     btnRecordAttestation.disabled = true;
     resetTxLifecycleUI();
 
     try {
-      txStepSubmit.className = "tx-step active";
+      if (txStepSubmit) txStepSubmit.className = "tx-step active";
       await new Promise((r) => setTimeout(r, 150));
-      txStepBroadcast.className = "tx-step active";
+      if (txStepBroadcast) txStepBroadcast.className = "tx-step active";
       await new Promise((r) => setTimeout(r, 150));
-      txStepPending.className = "tx-step active";
+      if (txStepPending) txStepPending.className = "tx-step active";
 
       const response = await fetch("/api/blockchain/attest", {
         method: "POST",
@@ -393,11 +606,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (res.success && res.data?.verifierRecord?.attestationTxHash) {
         const rec = res.data.verifierRecord;
-        txStepConfirmed.className = "tx-step confirmed";
-        txHash.textContent = rec.attestationTxHash;
-        txBlockNum.textContent = rec.blockNumber || "1";
-        txContractAddr.textContent = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-        txVerifierAddr.textContent = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73";
+        if (txStepConfirmed) txStepConfirmed.className = "tx-step confirmed";
+        if (txHash) txHash.textContent = rec.attestationTxHash;
+        if (txBlockNum) txBlockNum.textContent = rec.blockNumber ?? "1";
+        if (txContractAddr) txContractAddr.textContent = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+        if (txVerifierAddr) txVerifierAddr.textContent = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73";
 
         const pipeStage6 = document.getElementById("pipe-stage-6");
         const pipeStatus6 = document.getElementById("pipe-status-6");
@@ -419,8 +632,8 @@ document.addEventListener("DOMContentLoaded", () => {
     [txStepSubmit, txStepBroadcast, txStepPending, txStepConfirmed].forEach((el) => {
       if (el) el.className = "tx-step";
     });
-    txHash.textContent = "--";
-    txBlockNum.textContent = "--";
+    if (txHash) txHash.textContent = "--";
+    if (txBlockNum) txBlockNum.textContent = "--";
   }
 
   // REFRESH HISTORY BUTTON
@@ -439,13 +652,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   labAttackSelect?.addEventListener("change", () => {
     const val = labAttackSelect.value;
-    attackDescText.textContent = attackDescriptions[val] || "Select an attack vector.";
+    if (attackDescText) attackDescText.textContent = attackDescriptions[val] || "Select an attack vector.";
   });
 
   btnRunAttackSimulation?.addEventListener("click", async () => {
     btnRunAttackSimulation.disabled = true;
     try {
-      const attackType = labAttackSelect.value;
+      const attackType = labAttackSelect ? labAttackSelect.value : "proof_mutation";
       const response = await fetch("/api/pipeline/attack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -455,20 +668,26 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (res.success && res.data) {
         const d = res.data;
-        repAttackName.textContent = d.attackMode.name;
-        repActualResult.textContent = d.verifierRecord.status;
-        repActualResult.className = d.verifierRecord.status === "REJECT" ? "r-v badge reject" : "r-v badge pass";
-        repMitigationType.textContent = d.verifierRecord.mitigationType || "Application Policy";
-        repExpectedProperty.textContent = d.attackMode.expectedProperty;
-        repRejectionReason.textContent = d.verifierRecord.reason || "Verification rejected.";
-
-        if (d.verifierRecord.status === "REJECT") {
-          labMitigatedBadge.textContent = "✓ ATTACK MITIGATED";
-          labMitigatedBadge.className = "badge pass";
-        } else {
-          labMitigatedBadge.textContent = "✕ UNMITIGATED";
-          labMitigatedBadge.className = "badge reject";
+        if (repAttackName) repAttackName.textContent = d.attackMode.name;
+        if (repActualResult) {
+          repActualResult.textContent = d.verifierRecord.status;
+          repActualResult.className = d.verifierRecord.status === "REJECT" ? "r-v badge reject" : "r-v badge pass";
         }
+        if (repMitigationType) repMitigationType.textContent = d.verifierRecord.mitigationType || "Application Policy";
+        if (repExpectedProperty) repExpectedProperty.textContent = d.attackMode.expectedProperty;
+        if (repRejectionReason) repRejectionReason.textContent = d.verifierRecord.reason || "Verification rejected.";
+
+        if (labMitigatedBadge) {
+          if (d.verifierRecord.status === "REJECT") {
+            labMitigatedBadge.textContent = "✓ ATTACK MITIGATED";
+            labMitigatedBadge.className = "badge pass";
+          } else {
+            labMitigatedBadge.textContent = "✕ UNMITIGATED";
+            labMitigatedBadge.className = "badge reject";
+          }
+        }
+      } else {
+        throw new Error(res.error || "Attack simulation failed.");
       }
     } catch (err) {
       alert("Attack simulation error: " + err.message);
