@@ -37,6 +37,8 @@ export interface VerificationRecord {
   verificationTimestamp: string;
   attestationTxHash?: string;
   blockNumber?: number;
+  contractAddress?: string;
+  verifier?: string;
   disclaimer: string;
 }
 
@@ -125,17 +127,14 @@ export async function processRemoteVerification(
         true,
         epochSeconds,
         proofHash,
-        { type: 0, gasPrice: 0, gasLimit: 1000000 }
+        { gasLimit: 1000000, gasPrice: 1000000000n }
       );
-      let receipt = null;
-      for (let attempt = 0; attempt < 10; attempt++) {
-        await new Promise((r) => setTimeout(r, 600));
-        receipt = await provider.getTransactionReceipt(tx.hash);
-        if (receipt) break;
-      }
+      const receipt = await tx.wait();
 
       record.attestationTxHash = tx.hash;
       record.blockNumber = receipt ? receipt.blockNumber : await provider.getBlockNumber();
+      record.contractAddress = contractAddress;
+      record.verifier = signer.address;
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       console.error("On-chain attestation transaction failed:", errMsg);

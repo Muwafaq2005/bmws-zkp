@@ -17,7 +17,7 @@ services:
       - --rpc-http-cors-origins=*
       - --host-allowlist=*
       - --miner-enabled=true
-      - --miner-coinbase=0xfe3b557e8fb62b89f4916b721be55ceb828dbd73
+      - --miner-coinbase=0xb5fbc69cb05deb0de2f016aa354ee2d31bd0ace2
       - --node-private-key-file=/etc/besu/key1
       - --min-gas-price=0
       - --p2p-enabled=false

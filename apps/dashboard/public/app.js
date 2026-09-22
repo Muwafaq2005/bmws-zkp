@@ -609,8 +609,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (txStepConfirmed) txStepConfirmed.className = "tx-step confirmed";
         if (txHash) txHash.textContent = rec.attestationTxHash;
         if (txBlockNum) txBlockNum.textContent = rec.blockNumber ?? "1";
-        if (txContractAddr) txContractAddr.textContent = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-        if (txVerifierAddr) txVerifierAddr.textContent = "0xfe3b557e8fb62b89f4916b721be55ceb828dbd73";
+        if (txContractAddr) txContractAddr.textContent = rec.contractAddress || histContract?.textContent || "--";
+        if (txVerifierAddr) txVerifierAddr.textContent = rec.verifier || "--";
 
         const pipeStage6 = document.getElementById("pipe-stage-6");
         const pipeStatus6 = document.getElementById("pipe-status-6");
