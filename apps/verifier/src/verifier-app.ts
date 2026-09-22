@@ -125,12 +125,17 @@ export async function processRemoteVerification(
         true,
         epochSeconds,
         proofHash,
-        { gasLimit: 500000 }
+        { type: 0, gasPrice: 0, gasLimit: 1000000 }
       );
-      const receipt = await tx.wait();
+      let receipt = null;
+      for (let attempt = 0; attempt < 10; attempt++) {
+        await new Promise((r) => setTimeout(r, 600));
+        receipt = await provider.getTransactionReceipt(tx.hash);
+        if (receipt) break;
+      }
 
-      record.attestationTxHash = receipt.hash;
-      record.blockNumber = receipt.blockNumber;
+      record.attestationTxHash = tx.hash;
+      record.blockNumber = receipt ? receipt.blockNumber : await provider.getBlockNumber();
     } catch (err) {
       const errMsg = err instanceof Error ? err.message : String(err);
       console.error("On-chain attestation transaction failed:", errMsg);

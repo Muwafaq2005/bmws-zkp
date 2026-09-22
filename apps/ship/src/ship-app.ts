@@ -1,32 +1,7 @@
 import { generateTelemetryWindow, type TelemetryWindow } from "@bwms/telemetry";
 import { buildMerkleTree } from "@bwms/merkle";
-import { createVerificationPackage, type VerificationPackage, type Groth16Proof } from "@bwms/zk";
+import { createVerificationPackage, generateGroth16Proof, type VerificationPackage, type Groth16Proof } from "@bwms/zk";
 import { simulateVSATTransmission, type VSATLinkConfig, type TransmissionMetrics } from "@bwms/vsat-simulator";
-import fs from "node:fs";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-function resolveBuildPath(relativePath: string): string {
-  const candidates = [
-    path.resolve(process.cwd(), relativePath),
-    path.resolve(process.cwd(), "../..", relativePath),
-    path.resolve(process.cwd(), "..", relativePath),
-    path.resolve(__dirname, "../../..", relativePath),
-  ];
-  for (const candidate of candidates) {
-    if (fs.existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return path.resolve(process.cwd(), relativePath);
-}
-
-const PROOF_PATH = resolveBuildPath("build/zk/proof.json");
-const PUBLIC_PATH = resolveBuildPath("build/zk/public.json");
 
 export interface ShipTransmissionResult {
   window: TelemetryWindow;
@@ -46,23 +21,14 @@ export async function processAndTransmitShipTelemetry(
   const merkleTree = await buildMerkleTree(window.records);
   const merkleRoot = merkleTree.root.toString();
 
-  // 3. Load / Construct Proving Artifacts
-  let proof: Groth16Proof;
-  let publicInputs: string[];
-
-  try {
-    proof = JSON.parse(await readFile(PROOF_PATH, "utf8"));
-    publicInputs = JSON.parse(await readFile(PUBLIC_PATH, "utf8"));
-  } catch (err) {
-    throw new Error(
-      `Missing ZK proof artifacts at ${PROOF_PATH}. Please ensure proof generation has been executed before transmitting telemetry package: ${err instanceof Error ? err.message : String(err)}`
-    );
-  }
+  // 3. Dynamic Groth16 Proof Generation
+  const { proof, publicSignals } = await generateGroth16Proof(window);
+  const rootInput = publicSignals[0] ?? merkleRoot;
 
   // 4. Construct Verification Package (No Raw Telemetry Included)
   const verificationPackage = createVerificationPackage(
     window,
-    BigInt(merkleRoot),
+    BigInt(rootInput),
     proof,
     new Date().toISOString()
   );

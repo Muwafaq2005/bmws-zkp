@@ -302,7 +302,7 @@ app.post("/api/verifier/verify", async (req, res) => {
     }
 
     const verifierRecord = await processRemoteVerification(pkg, false, {
-      seenAttestations: seenAttestationKeys,
+      seenAttestations: new Set(seenAttestationKeys),
     });
 
     res.json({
