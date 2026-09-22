@@ -7,7 +7,12 @@ import { ethers } from "ethers";
 import { processAndTransmitShipTelemetry } from "@bwms/ship-app";
 import { processRemoteVerification } from "@bwms/verifier-app";
 import { compareVSATTransmission, simulateVSATTransmission } from "@bwms/vsat-simulator";
-import { generateTelemetryWindow, validateTelemetryWindow } from "@bwms/telemetry";
+import {
+  generateTelemetryWindow,
+  validateTelemetryWindow,
+  SensorSimulator,
+} from "@bwms/telemetry";
+import { evaluateCompliance, DEMO_RULE_SET } from "@bwms/compliance";
 import { buildMerkleTree } from "@bwms/merkle";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,8 +25,9 @@ app.use(express.static(path.join(__dirname, "public")));
 const PORT = process.env.PORT || 3000;
 const BESU_RPC_URL = process.env.BESU_RPC_URL || "http://127.0.0.1:8545";
 
+let activeSimulator = null;
 let currentShipState = {
-  window: null,
+  sealedWindow: null,
   merkleTree: null,
   merkleRoot: null,
   verificationPackage: null,
@@ -45,53 +51,53 @@ function resolveBuildPath(relativePath) {
 }
 
 // ----------------------------------------------------
-// SHIP CONSOLE ENDPOINTS
+// SHIP CONSOLE ENDPOINTS — STATEFUL SENSOR SIMULATOR
 // ----------------------------------------------------
 
-// Step 1: Start Operation & Generate 64-Record Telemetry Window
+// Step 1: Initialize Sensor Simulation Session
 app.post("/api/ship/operate", async (req, res) => {
   try {
-    const window = generateTelemetryWindow();
-    const merkleTree = await buildMerkleTree(window.records);
-    const merkleRoot = merkleTree.root.toString();
+    const scenario = req.body?.scenario || "NORMAL";
+    const operationId = req.body?.operationId || `OP-${Date.now().toString().slice(-6)}`;
+    const windowId = req.body?.windowId || `WIN-${Date.now().toString().slice(-6)}`;
 
-    const validation = validateTelemetryWindow(window);
+    activeSimulator = new SensorSimulator({
+      scenario,
+      operationId,
+      windowId,
+    });
 
-    const checks = {
-      windowComplete: window.records.length === 64,
-      sequenceIntegrity: validation.errors.every(e => e.code !== "INVALID_SEQUENCE" && e.code !== "DUPLICATE_SEQUENCE"),
-      timestampIntegrity: validation.errors.every(e => e.code !== "NON_MONOTONIC_TIMESTAMP" && e.code !== "INVALID_TIMESTAMP"),
-      operationConsistency: validation.errors.every(e => e.code !== "OPERATION_ID_MISMATCH"),
-      windowConsistency: validation.errors.every(e => e.code !== "WINDOW_ID_MISMATCH"),
-    };
+    const firstReading = activeSimulator.step();
 
     currentShipState = {
-      window,
-      merkleTree,
-      merkleRoot,
+      sealedWindow: null,
+      merkleTree: null,
+      merkleRoot: null,
       verificationPackage: null,
+    };
+
+    const sessionState = {
+      operationId: activeSimulator.getOperationId(),
+      windowId: activeSimulator.getWindowId(),
+      state: activeSimulator.getSimulationState(),
+      scenario: activeSimulator.getScenario(),
+      currentReadingCount: activeSimulator.getCurrentSequence(),
+      readings: activeSimulator.getRecords(),
+      isCompliant: activeSimulator.isCompliant(),
     };
 
     res.json({
       success: true,
       data: {
+        sessionState,
+        latestReading: firstReading,
         vessel: {
           name: "M/V PACIFIC PROSPERITY",
           imo: "IMO 9876543",
-          operationId: window.operation_id,
-          windowId: window.window_id,
-          timestamp: new Date().toISOString(),
+          operationId: activeSimulator.getOperationId(),
+          windowId: activeSimulator.getWindowId(),
+          timestamp: firstReading.timestamp,
         },
-        sensors: {
-          flowRate: window.records[63].flow_rate,
-          uvIntensity: window.records[63].uv_intensity,
-          temperature: window.records[63].temperature,
-          salinity: window.records[63].salinity,
-          turbidity: window.records[63].turbidity,
-        },
-        window,
-        merkleRoot,
-        checks,
       },
     });
   } catch (error) {
@@ -99,7 +105,104 @@ app.post("/api/ship/operate", async (req, res) => {
   }
 });
 
-// Step 2: Generate Groth16 Zero-Knowledge Proof & Verification Package
+// Step 2: Incremental Reading Step (Polled by Client UI)
+app.post("/api/ship/step", async (req, res) => {
+  try {
+    if (!activeSimulator) {
+      return res.status(400).json({ success: false, error: "No active simulation session. Click 'START OPERATION' first." });
+    }
+
+    const state = activeSimulator.getSimulationState();
+    if (state === "SEALED" || state === "COMPLETE") {
+      const records = activeSimulator.getRecords();
+      return res.json({
+        success: true,
+        data: {
+          sessionState: {
+            operationId: activeSimulator.getOperationId(),
+            windowId: activeSimulator.getWindowId(),
+            state: "SEALED",
+            currentReadingCount: records.length,
+            readings: records,
+            merkleRoot: currentShipState.merkleRoot,
+            isCompliant: activeSimulator.isCompliant(),
+          },
+          latestReading: records[records.length - 1],
+        },
+      });
+    }
+
+    const reading = activeSimulator.step();
+    const currentSequence = activeSimulator.getCurrentSequence();
+    const simState = activeSimulator.getSimulationState();
+
+    if (simState === "FAILED") {
+      return res.json({
+        success: true,
+        data: {
+          sessionState: {
+            operationId: activeSimulator.getOperationId(),
+            windowId: activeSimulator.getWindowId(),
+            state: "FAILED",
+            currentReadingCount: currentSequence,
+            readings: activeSimulator.getRecords(),
+            isCompliant: false,
+          },
+          latestReading: reading,
+        },
+      });
+    }
+
+    if (currentSequence === 64 || simState === "COMPLETE") {
+      const sealedWindow = activeSimulator.seal();
+      const merkleTree = await buildMerkleTree(sealedWindow.records);
+      const merkleRoot = merkleTree.root.toString();
+      const compliance = evaluateCompliance(sealedWindow, DEMO_RULE_SET);
+
+      currentShipState.sealedWindow = sealedWindow;
+      currentShipState.merkleTree = merkleTree;
+      currentShipState.merkleRoot = merkleRoot;
+
+      return res.json({
+        success: true,
+        data: {
+          sessionState: {
+            operationId: activeSimulator.getOperationId(),
+            windowId: activeSimulator.getWindowId(),
+            state: "SEALED",
+            currentReadingCount: 64,
+            readings: sealedWindow.records,
+            merkleRoot,
+            sealedWindow,
+            isCompliant: compliance.compliant,
+          },
+          latestReading: reading,
+          compliance,
+        },
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        sessionState: {
+          operationId: activeSimulator.getOperationId(),
+          windowId: activeSimulator.getWindowId(),
+          state: activeSimulator.getSimulationState(),
+          currentReadingCount: currentSequence,
+          readings: activeSimulator.getRecords(),
+          isCompliant: activeSimulator.isCompliant(),
+        },
+        latestReading: reading,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+
+// Step 3: Generate Groth16 ZK Proof (Consumes Sealed Window)
 app.post("/api/ship/generate-proof", async (req, res) => {
   try {
     const vsatConfig = req.body?.vsatConfig || {
@@ -108,7 +211,25 @@ app.post("/api/ship/generate-proof", async (req, res) => {
       packetLossPercent: 2.0,
     };
 
-    const window = currentShipState.window || generateTelemetryWindow();
+    if (!currentShipState.sealedWindow) {
+      return res.status(400).json({
+        success: false,
+        error: "Cannot generate proof: telemetry window is incomplete or unsealed. Complete 64 readings first.",
+      });
+    }
+
+    const window = currentShipState.sealedWindow;
+    const compliance = evaluateCompliance(window, DEMO_RULE_SET);
+
+    if (!compliance.compliant) {
+      return res.status(400).json({
+        success: false,
+        compliant: false,
+        violations: compliance.violations,
+        error: `Compliance predicate failure: telemetry window violates ${DEMO_RULE_SET.rule_set_id} rules. (${compliance.violations.map(v => v.reason).join("; ")})`,
+      });
+    }
+
     const shipResult = await processAndTransmitShipTelemetry(window, vsatConfig);
 
     currentShipState.verificationPackage = shipResult.verificationPackage;
@@ -116,6 +237,7 @@ app.post("/api/ship/generate-proof", async (req, res) => {
 
     res.json({
       success: true,
+      compliant: true,
       data: {
         merkleRoot: shipResult.merkleRoot,
         verificationPackage: shipResult.verificationPackage,
@@ -130,7 +252,7 @@ app.post("/api/ship/generate-proof", async (req, res) => {
   }
 });
 
-// Step 3: Transmit Verification Package over Simulated VSAT Link
+// Step 4: Transmit Verification Package over Simulated VSAT Link
 app.post("/api/ship/transmit", async (req, res) => {
   try {
     const vsatConfig = req.body?.vsatConfig || {
@@ -139,12 +261,12 @@ app.post("/api/ship/transmit", async (req, res) => {
       packetLossPercent: 2.0,
     };
 
-    if (!currentShipState.verificationPackage) {
-      return res.status(400).json({ success: false, error: "No verification package generated yet. Click 'GENERATE ZK PROOF' first." });
+    if (!currentShipState.verificationPackage || !currentShipState.sealedWindow) {
+      return res.status(400).json({ success: false, error: "No verification package generated yet. Generate ZK proof first." });
     }
 
     const comparison = compareVSATTransmission(
-      currentShipState.window.records,
+      currentShipState.sealedWindow.records,
       currentShipState.verificationPackage,
       vsatConfig
     );
@@ -172,7 +294,6 @@ app.post("/api/ship/transmit", async (req, res) => {
 // PORT VERIFICATION ENDPOINTS
 // ----------------------------------------------------
 
-// Execute Remote Verification Pipeline
 app.post("/api/verifier/verify", async (req, res) => {
   try {
     const pkg = req.body?.verificationPackage || currentShipState.verificationPackage;
@@ -193,7 +314,6 @@ app.post("/api/verifier/verify", async (req, res) => {
   }
 });
 
-// Submit Attestation Transaction to Permissioned EVM Blockchain
 app.post("/api/blockchain/attest", async (req, res) => {
   try {
     const pkg = req.body?.verificationPackage || currentShipState.verificationPackage;
@@ -218,7 +338,6 @@ app.post("/api/blockchain/attest", async (req, res) => {
   }
 });
 
-// Query On-Chain Attestation History Directly from Besu/Contract
 app.get("/api/blockchain/history", async (req, res) => {
   try {
     const contractInfoPath = resolveBuildPath("build/blockchain/contract_info.json");
@@ -245,7 +364,6 @@ app.get("/api/blockchain/history", async (req, res) => {
 
     const provider = new ethers.JsonRpcProvider(BESU_RPC_URL);
     
-    // Check RPC node connectivity
     let blockNumber = 0;
     try {
       blockNumber = await provider.getBlockNumber();
@@ -262,8 +380,6 @@ app.get("/api/blockchain/history", async (req, res) => {
     }
 
     const contract = new ethers.Contract(contractAddress, abi, provider);
-
-    // Query AttestationRecorded events for accurate block and tx details
     const filter = contract.filters.AttestationRecorded();
     const events = await contract.queryFilter(filter, 0, "latest");
 
@@ -302,7 +418,7 @@ app.get("/api/blockchain/history", async (req, res) => {
 });
 
 // ----------------------------------------------------
-// FULL SECURITY & ATTACK LAB ENDPOINT
+// FULL SECURITY ATTACK LAB ENDPOINT
 // ----------------------------------------------------
 
 app.post("/api/pipeline/attack", async (req, res) => {
@@ -391,7 +507,7 @@ app.post("/api/pipeline/attack", async (req, res) => {
 
     const verifierRecord = await processRemoteVerification(
       tamperedPackage,
-      false, // Do not record invalid proof on chain
+      false,
       options
     );
 
@@ -417,51 +533,6 @@ app.post("/api/pipeline/attack", async (req, res) => {
   }
 });
 
-// Pipeline End-to-End Run Endpoint
-app.post("/api/pipeline/run", async (req, res) => {
-  try {
-    const vsatConfig = req.body?.vsatConfig || {
-      bandwidthKbps: 512,
-      roundTripLatencyMs: 650,
-      packetLossPercent: 2.0,
-    };
-
-    const shipResult = await processAndTransmitShipTelemetry(undefined, vsatConfig);
-
-    const comparison = compareVSATTransmission(
-      shipResult.window.records,
-      shipResult.verificationPackage,
-      vsatConfig
-    );
-
-    const verifierRecord = await processRemoteVerification(
-      shipResult.verificationPackage,
-      true, // Record on-chain attestation
-      { seenAttestations: seenAttestationKeys }
-    );
-
-    currentShipState = {
-      window: shipResult.window,
-      merkleTree: null,
-      merkleRoot: shipResult.merkleRoot,
-      verificationPackage: shipResult.verificationPackage,
-    };
-
-    const result = {
-      timestamp: new Date().toISOString(),
-      shipResult,
-      comparison,
-      verifierRecord,
-      attackMode: null,
-    };
-
-    res.json({ success: true, data: result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error instanceof Error ? error.message : String(error) });
-  }
-});
-
-// System Metrics Baseline Endpoint
 app.get("/api/metrics", async (req, res) => {
   try {
     const rawWindow = generateTelemetryWindow();

@@ -3,11 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const navTabs = document.querySelectorAll(".nav-tab");
   const tabPanes = document.querySelectorAll(".tab-pane");
 
-  // Ship Console Controls
+  // Ship Console Controls & Elements
   const btnShipOperate = document.getElementById("btn-ship-operate");
   const btnShipProof = document.getElementById("btn-ship-proof");
   const btnShipTransmit = document.getElementById("btn-ship-transmit");
   const btnCopyRoot = document.getElementById("btn-copy-root");
+  const shipScenarioSelect = document.getElementById("ship-scenario-select");
+  const scenarioNoteText = document.getElementById("scenario-note-text");
+  const sensorSampleBadge = document.getElementById("sensor-sample-badge");
 
   // Ship UI Elements
   const shipOpId = document.getElementById("ship-op-id");
@@ -18,198 +21,225 @@ document.addEventListener("DOMContentLoaded", () => {
   const sensTemp = document.getElementById("sens-temp");
   const sensSalinity = document.getElementById("sens-salinity");
   const sensTurb = document.getElementById("sens-turb");
+
+  const cardFlow = document.getElementById("card-flow");
+  const cardUv = document.getElementById("card-uv");
+  const cardTemp = document.getElementById("card-temp");
+  const cardSalinity = document.getElementById("card-salinity");
+  const cardTurb = document.getElementById("card-turb");
+
+  const telemetryTableBody = document.getElementById("telemetry-table-body");
   const winCounterText = document.getElementById("win-counter-text");
   const winProgressFill = document.getElementById("win-progress-fill");
   const shipMerkleRoot = document.getElementById("ship-merkle-root");
   const shipProofStatus = document.getElementById("ship-proof-status");
-  const shipProofSize = document.getElementById("ship-proof-size");
-  const vsatRawSize = document.getElementById("vsat-raw-size");
-  const vsatZkSize = document.getElementById("vsat-zk-size");
-  const vsatSavings = document.getElementById("vsat-savings");
 
-  // Port Verification Controls & UI
-  const portOpWin = document.getElementById("port-op-win");
-  const portPkgTime = document.getElementById("port-pkg-time");
-  const portMerkleRoot = document.getElementById("port-merkle-root");
-  const btnRunVerification = document.getElementById("btn-run-verification");
-  const btnRecordAttestation = document.getElementById("btn-record-attestation");
-  const portResultBanner = document.getElementById("port-result-banner");
-  const portBannerTitle = document.getElementById("port-banner-title");
-  const portBannerDesc = document.getElementById("port-banner-desc");
+  // Scenario Descriptions
+  const scenarioNotes = {
+    NORMAL: "Generates 64 realistic incremental telemetry values satisfying all BWMS-DEMO-V1 compliance bounds.",
+    LOW_UV: "Generates telemetry with UV intensity falling below the 40.0 mW/cm² requirement (Predicate Violation).",
+    LOW_FLOW: "Generates telemetry with ballast flow rate falling below 800.0 m³/h (Predicate Violation).",
+    HIGH_TURBIDITY: "Generates telemetry with turbidity exceeding 5.0 NTU (Predicate Violation).",
+    TEMPERATURE_EXCURSION: "Generates telemetry with water temperature exceeding 30.0°C (Predicate Violation).",
+    SENSOR_DRIFT: "Simulates gradual downward sensor calibration drift below compliance thresholds.",
+    OUTLIER: "Injects a single transient turbidity spike at record 32 violating compliance.",
+    MISSING_READING: "Simulates sequence counter gap (skips sequence 25) triggering window validation failure.",
+  };
 
-  // Transaction Lifecycle Elements
-  const txStepSubmit = document.getElementById("tx-step-submit");
-  const txStepBroadcast = document.getElementById("tx-step-broadcast");
-  const txStepPending = document.getElementById("tx-step-pending");
-  const txStepConfirmed = document.getElementById("tx-step-confirmed");
-  const txHash = document.getElementById("tx-hash");
-  const txBlockNum = document.getElementById("tx-block-num");
-  const txContractAddr = document.getElementById("tx-contract-addr");
-  const txVerifierAddr = document.getElementById("tx-verifier-addr");
-
-  // Blockchain History Elements
-  const btnRefreshHistory = document.getElementById("btn-refresh-history");
-  const histContract = document.getElementById("hist-contract");
-  const histTotalCount = document.getElementById("hist-total-count");
-  const historyTableBody = document.getElementById("history-table-body");
-  const headerChainStatus = document.getElementById("header-chain-status");
-
-  // Security Lab Controls & UI
-  const labAttackSelect = document.getElementById("lab-attack-select");
-  const attackDescText = document.getElementById("attack-desc-text");
-  const btnRunAttackSimulation = document.getElementById("btn-run-attack-simulation");
-  const repAttackName = document.getElementById("rep-attack-name");
-  const repActualResult = document.getElementById("rep-actual-result");
-  const repMitigationType = document.getElementById("rep-mitigation-type");
-  const repExpectedProperty = document.getElementById("rep-expected-property");
-  const repRejectionReason = document.getElementById("rep-rejection-reason");
-  const labMitigatedBadge = document.getElementById("lab-mitigated-badge");
-
-  // Modal Elements
-  const detailModal = document.getElementById("detail-modal");
-  const btnCloseDetail = document.getElementById("btn-close-detail");
-  const modalDetailJson = document.getElementById("modal-detail-json");
-
-  let currentVerificationPackage = null;
-  let currentVerifierRecord = null;
-  let historyCache = [];
-
-  // TAB SWITCHING LOGIC
-  navTabs.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const targetTab = tab.dataset.tab;
-      navTabs.forEach((t) => t.classList.remove("active"));
-      tabPanes.forEach((p) => p.classList.remove("active"));
-
-      tab.classList.add("active");
-      document.getElementById(targetTab)?.classList.add("active");
-
-      if (targetTab === "tab-history") {
-        fetchBlockchainHistory();
-      }
-    });
+  shipScenarioSelect?.addEventListener("change", () => {
+    const scenario = shipScenarioSelect.value;
+    scenarioNoteText.textContent = scenarioNotes[scenario] || "Simulates telemetry under specified operational scenario.";
   });
 
-  // INITIALIZE BLOCKCHAIN STATUS & HISTORY
-  fetchBlockchainHistory();
-
-  async function fetchBlockchainHistory() {
-    try {
-      const res = await fetch("/api/blockchain/history");
-      const json = await res.json();
-
-      if (json.success && json.data) {
-        const d = json.data;
-        headerChainStatus.textContent = d.connected ? "CONNECTED" : "OFFLINE";
-        headerChainStatus.className = d.connected ? "pill-value text-green" : "pill-value";
-
-        histContract.textContent = d.contractAddress || "--";
-        histTotalCount.textContent = d.totalAttestations || "0";
-        historyCache = d.history || [];
-
-        renderHistoryTable(historyCache);
-      }
-    } catch {
-      headerChainStatus.textContent = "DISCONNECTED";
-    }
-  }
-
-  function renderHistoryTable(records) {
-    if (!records || records.length === 0) {
-      historyTableBody.innerHTML = `
-        <tr>
-          <td colspan="9" class="empty-row">No on-chain attestations recorded yet. Execute a valid ship & verifier workflow to issue an EVM transaction.</td>
-        </tr>
-      `;
-      return;
-    }
-
-    historyTableBody.innerHTML = records
-      .map((r, index) => {
-        const shortRoot = r.merkleRoot.length > 16 ? r.merkleRoot.slice(0, 10) + "..." + r.merkleRoot.slice(-6) : r.merkleRoot;
-        const shortTx = r.transactionHash ? r.transactionHash.slice(0, 10) + "..." + r.transactionHash.slice(-6) : "--";
-        const dateStr = r.verificationTimestamp ? new Date(r.verificationTimestamp).toLocaleString() : "--";
-
-        return `
-          <tr data-index="${index}">
-            <td class="mono font-bold">${r.blockNumber || "--"}</td>
-            <td>${dateStr}</td>
-            <td class="mono highlight">${r.operationId}</td>
-            <td class="mono highlight">${r.windowId}</td>
-            <td class="mono">${shortRoot}</td>
-            <td class="mono">${r.ruleSetId}</td>
-            <td><span class="badge pass">✓ COMPLIANT</span></td>
-            <td class="mono">${shortTx}</td>
-            <td><button class="btn btn-secondary btn-sm btn-inspect" data-index="${index}">🔍 Inspect</button></td>
-          </tr>
-        `;
-      })
-      .join("");
-
-    document.querySelectorAll(".btn-inspect").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const idx = Number(btn.dataset.index);
-        showDetailModal(historyCache[idx]);
-      });
-    });
-  }
-
-  function showDetailModal(record) {
-    if (!record) return;
-    modalDetailJson.textContent = JSON.stringify(record, null, 2);
-    detailModal.classList.remove("hidden");
-  }
-
-  btnCloseDetail?.addEventListener("click", () => detailModal.classList.add("hidden"));
-  detailModal?.addEventListener("click", (e) => {
-    if (e.target === detailModal) detailModal.classList.add("hidden");
-  });
-
-  // STEP 1: SHIP START OPERATION
+  // STEP 1: SHIP START OPERATION & INCREMENTAL SENSOR STREAMING
   btnShipOperate.addEventListener("click", async () => {
     btnShipOperate.disabled = true;
+    btnShipProof.disabled = true;
+    btnShipTransmit.disabled = true;
+    if (shipScenarioSelect) shipScenarioSelect.disabled = true;
+
+    // Reset UI State
+    telemetryTableBody.innerHTML = `<tr><td colspan="7" class="empty-row">Initializing sensor simulation stream...</td></tr>`;
+    shipMerkleRoot.textContent = "-- (Collecting Telemetry...)";
+    shipProofStatus.textContent = "SAMPLING IN PROGRESS";
+    shipProofStatus.className = "zk-v badge ready";
+
+    resetSensorCards();
+    resetChecklist();
+
+    const selectedScenario = shipScenarioSelect ? shipScenarioSelect.value : "NORMAL";
+
     try {
-      const response = await fetch("/api/ship/operate", { method: "POST" });
-      const res = await response.json();
+      // 1. Initialize Simulation Session
+      const initRes = await fetch("/api/ship/operate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scenario: selectedScenario }),
+      });
+      const initJson = await initRes.json();
 
-      if (res.success && res.data) {
-        const d = res.data;
-        shipOpId.textContent = d.vessel.operationId;
-        shipWinId.textContent = d.vessel.windowId;
-        shipTimestamp.textContent = d.vessel.timestamp;
+      if (!initJson.success) {
+        throw new Error(initJson.error || "Failed to start operation session.");
+      }
 
-        sensFlow.innerHTML = `${(d.sensors.flowRate / 10).toFixed(1)} <span class="unit">m³/h</span>`;
-        sensUv.innerHTML = `${(d.sensors.uvIntensity / 10).toFixed(1)} <span class="unit">mW/cm²</span>`;
-        sensTemp.innerHTML = `${(d.sensors.temperature / 10).toFixed(1)} <span class="unit">°C</span>`;
-        sensSalinity.innerHTML = `${(d.sensors.salinity / 10).toFixed(1)} <span class="unit">PSU</span>`;
-        sensTurb.innerHTML = `${(d.sensors.turbidity / 10).toFixed(1)} <span class="unit">NTU</span>`;
+      const initialSession = initJson.data.sessionState;
+      shipOpId.textContent = initialSession.operationId;
+      shipWinId.textContent = initialSession.windowId;
 
-        // Animate Window Buildup
-        for (let i = 1; i <= 64; i += 8) {
-          winCounterText.textContent = `${i} / 64 RECORDS`;
-          winProgressFill.style.width = `${(i / 64) * 100}%`;
-          await new Promise((r) => setTimeout(r, 40));
+      telemetryTableBody.innerHTML = "";
+
+      // 2. Step Loop: Collect 64 Readings Incrementally
+      let currentState = initialSession.state;
+      let sessionData = initialSession;
+
+      while (currentState === "RUNNING") {
+        const stepRes = await fetch("/api/ship/step", { method: "POST" });
+        const stepJson = await stepRes.json();
+
+        if (!stepJson.success) {
+          throw new Error(stepJson.error || "Sensor step execution error.");
         }
-        winCounterText.textContent = `64 / 64 RECORDS`;
-        winProgressFill.style.width = `100%`;
 
-        // Update Integrity Check Badges
+        sessionData = stepJson.data.sessionState;
+        currentState = sessionData.state;
+        const reading = stepJson.data.latestReading;
+
+        if (reading) {
+          updateSensorGauges(reading);
+          appendTelemetryRow(reading);
+        }
+
+        const count = sessionData.currentReadingCount;
+        winCounterText.textContent = `${count} / 64 RECORDS`;
+        winProgressFill.style.width = `${(count / 64) * 100}%`;
+        if (sensorSampleBadge) sensorSampleBadge.textContent = `SEQUENCE ${count} / 64`;
+
+        // Small interval to make incremental collection visible to user
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
+      // 3. Finalize UI based on Sealing & Compliance outcome
+      if (currentState === "SEALED") {
+        shipTimestamp.textContent = sessionData.readings[sessionData.readings.length - 1]?.timestamp || new Date().toISOString();
+        shipMerkleRoot.textContent = sessionData.merkleRoot || "--";
+
         document.getElementById("chk-complete").className = "check-item passed";
         document.getElementById("chk-seq").className = "check-item passed";
         document.getElementById("chk-ts").className = "check-item passed";
-        document.getElementById("chk-op").className = "check-item passed";
-        document.getElementById("chk-win").className = "check-item passed";
 
-        shipMerkleRoot.textContent = d.merkleRoot;
-        btnShipProof.disabled = false;
+        const chkCompliance = document.getElementById("chk-compliance");
+        if (sessionData.isCompliant) {
+          if (chkCompliance) {
+            chkCompliance.className = "check-item passed";
+            chkCompliance.querySelector(".chk-label").textContent = "BWMS-DEMO-V1 Compliant ✓";
+          }
+          shipProofStatus.textContent = "READY TO GENERATE PROOF";
+          shipProofStatus.className = "zk-v badge pass";
+          btnShipProof.disabled = false;
+        } else {
+          if (chkCompliance) {
+            chkCompliance.className = "check-item";
+            chkCompliance.style.borderColor = "var(--red-border)";
+            chkCompliance.style.background = "var(--red-dim)";
+            chkCompliance.style.color = "var(--red-failed)";
+            chkCompliance.querySelector(".chk-label").textContent = "BWMS-DEMO-V1 Violation ✕";
+          }
+          shipProofStatus.textContent = "NON-COMPLIANT (PROOF BLOCKED)";
+          shipProofStatus.className = "zk-v badge reject";
+          btnShipProof.disabled = true;
+        }
+      } else if (currentState === "FAILED") {
+        shipMerkleRoot.textContent = "SIMULATION FAILED";
+        shipProofStatus.textContent = "FAILED (SEQUENCE GAP)";
+        shipProofStatus.className = "zk-v badge reject";
+
+        document.getElementById("chk-seq").style.borderColor = "var(--red-border)";
+        document.getElementById("chk-seq").style.background = "var(--red-dim)";
+        document.getElementById("chk-seq").style.color = "var(--red-failed)";
+        document.getElementById("chk-seq").querySelector(".chk-label").textContent = "Sequence Integrity Failure ✕";
       }
     } catch (err) {
-      alert("Failed to initialize ship operation: " + err.message);
+      alert("Ship sensor simulation error: " + err.message);
+      shipProofStatus.textContent = "ERROR";
+      shipProofStatus.className = "zk-v badge reject";
     } finally {
       btnShipOperate.disabled = false;
+      if (shipScenarioSelect) shipScenarioSelect.disabled = false;
     }
   });
+
+  function resetSensorCards() {
+    [cardFlow, cardUv, cardTemp, cardSalinity, cardTurb].forEach((card) => {
+      if (card) card.classList.remove("violation");
+    });
+  }
+
+  function resetChecklist() {
+    ["chk-complete", "chk-seq", "chk-ts", "chk-compliance"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.className = "check-item";
+        el.style = "";
+      }
+    });
+  }
+
+  function updateSensorGauges(r) {
+    const flowM3 = (r.flowRate / 10).toFixed(1);
+    const uvMw = (r.uvIntensity / 10).toFixed(1);
+    const tempC = (r.temperature / 10).toFixed(1);
+    const salPsu = (r.salinity / 10).toFixed(1);
+    const turbNtu = (r.turbidity / 10).toFixed(1);
+
+    sensFlow.innerHTML = `${flowM3} <span class="unit">m³/h</span>`;
+    sensUv.innerHTML = `${uvMw} <span class="unit">mW/cm²</span>`;
+    sensTemp.innerHTML = `${tempC} <span class="unit">°C</span>`;
+    sensSalinity.innerHTML = `${salPsu} <span class="unit">PSU</span>`;
+    sensTurb.innerHTML = `${turbNtu} <span class="unit">NTU</span>`;
+
+    // Check violations against BWMS-DEMO-V1 bounds
+    const flowViolated = r.flowRate < 8000;
+    const uvViolated = r.uvIntensity < 400;
+    const tempViolated = r.temperature < 200 || r.temperature > 300;
+    const salViolated = r.salinity < 250 || r.salinity > 350;
+    const turbViolated = r.turbidity > 50;
+
+    if (cardFlow) cardFlow.classList.toggle("violation", flowViolated);
+    if (cardUv) cardUv.classList.toggle("violation", uvViolated);
+    if (cardTemp) cardTemp.classList.toggle("violation", tempViolated);
+    if (cardSalinity) cardSalinity.classList.toggle("violation", salViolated);
+    if (cardTurb) cardTurb.classList.toggle("violation", turbViolated);
+  }
+
+  function appendTelemetryRow(r) {
+    const container = document.querySelector(".rolling-table-container");
+    const isViolating = r.flowRate < 8000 || r.uvIntensity < 400 || r.temperature < 200 || r.temperature > 300 || r.salinity < 250 || r.salinity > 350 || r.turbidity > 50;
+
+    const row = document.createElement("tr");
+    if (isViolating) row.className = "violating-row";
+
+    const flowStr = (r.flowRate / 10).toFixed(1);
+    const uvStr = (r.uvIntensity / 10).toFixed(1);
+    const tempStr = (r.temperature / 10).toFixed(1);
+    const salStr = (r.salinity / 10).toFixed(1);
+    const turbStr = (r.turbidity / 10).toFixed(1);
+
+    const tsTime = r.timestamp.includes("T") ? r.timestamp.split("T")[1].replace("Z", "") : r.timestamp;
+
+    row.innerHTML = `
+      <td class="mono font-bold">${r.sequenceNumber}</td>
+      <td class="mono">${tsTime}</td>
+      <td class="${r.flowRate < 8000 ? "cell-violation" : ""}">${flowStr}</td>
+      <td class="${r.uvIntensity < 400 ? "cell-violation" : ""}">${uvStr}</td>
+      <td class="${r.temperature < 200 || r.temperature > 300 ? "cell-violation" : ""}">${tempStr}</td>
+      <td class="${r.salinity < 250 || r.salinity > 350 ? "cell-violation" : ""}">${salStr}</td>
+      <td class="${r.turbidity > 50 ? "cell-violation" : ""}">${turbStr}</td>
+    `;
+
+    telemetryTableBody.appendChild(row);
+    if (container) container.scrollTop = container.scrollHeight;
+  }
+
 
   // STEP 2: GENERATE ZK PROOF
   btnShipProof.addEventListener("click", async () => {

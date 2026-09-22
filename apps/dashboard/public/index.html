@@ -79,7 +79,7 @@
       <div id="tab-ship" class="tab-pane active">
         <div class="console-grid-layout">
           
-          <!-- LEFT COLUMN: VESSEL & SENSORS -->
+          <!-- LEFT COLUMN: VESSEL, SCENARIO SELECTOR & LIVE SENSOR MONITOR -->
           <div class="grid-col left-col">
             
             <!-- VESSEL INFORMATION CARD -->
@@ -112,55 +112,79 @@
               </div>
             </section>
 
+            <!-- SENSOR SIMULATION SCENARIO SELECTOR -->
+            <section class="section-card scenario-card">
+              <div class="section-header">
+                <h2>OPERATIONAL SENSOR SCENARIOS</h2>
+                <span class="section-sub">Synthetic Telemetry Condition</span>
+              </div>
+              <div class="scenario-selector-box">
+                <label for="ship-scenario-select">Select Sensor Scenario (Prior to Operation Start)</label>
+                <select id="ship-scenario-select" class="select-input">
+                  <option value="NORMAL" selected>NORMAL (Compliant Operational Stream)</option>
+                  <option value="LOW_UV">LOW UV (UV &lt; 40 mW/cm² — Predicate Violation)</option>
+                  <option value="LOW_FLOW">LOW FLOW (Flow &lt; 800 m³/h — Predicate Violation)</option>
+                  <option value="HIGH_TURBIDITY">HIGH TURBIDITY (Turbidity &gt; 5.0 NTU — Predicate Violation)</option>
+                  <option value="TEMPERATURE_EXCURSION">TEMPERATURE EXCURSION (Temp &gt; 30°C — Predicate Violation)</option>
+                  <option value="SENSOR_DRIFT">SENSOR DRIFT (Flow Rate Drifts Down — Predicate Violation)</option>
+                  <option value="OUTLIER">OUTLIER (Record 32 Turbidity Spike — Predicate Violation)</option>
+                  <option value="MISSING_READING">MISSING READING (Sequence Gap — Validation Failure)</option>
+                </select>
+                <p class="scenario-note" id="scenario-note-text">
+                  Generates realistic incremental telemetry values satisfying all BWMS-DEMO-V1 compliance bounds.
+                </p>
+              </div>
+            </section>
+
             <!-- LIVE SENSOR STATUS CARD -->
             <section class="section-card">
               <div class="section-header">
-                <h2>BWMS LIVE SENSOR MONITOR</h2>
-                <span class="section-sub">Scaled Sensor Stream</span>
+                <h2>INCREMENTAL SENSOR MONITOR</h2>
+                <span class="section-sub" id="sensor-sample-badge">SEQUENCE 0 / 64</span>
               </div>
               <div class="sensor-grid">
-                <div class="sensor-card">
+                <div class="sensor-card" id="card-flow">
                   <div class="sensor-label">FLOW RATE</div>
-                  <div class="sensor-value" id="sens-flow">850 <span class="unit">m³/h</span></div>
-                  <div class="sensor-status ok">✓ ≥ 800 m³/h</div>
+                  <div class="sensor-value" id="sens-flow">-- <span class="unit">m³/h</span></div>
+                  <div class="sensor-status ok" id="status-flow">≥ 800 m³/h</div>
                 </div>
-                <div class="sensor-card">
+                <div class="sensor-card" id="card-uv">
                   <div class="sensor-label">UV INTENSITY</div>
-                  <div class="sensor-value" id="sens-uv">45 <span class="unit">mW/cm²</span></div>
-                  <div class="sensor-status ok">✓ ≥ 40 mW/cm²</div>
+                  <div class="sensor-value" id="sens-uv">-- <span class="unit">mW/cm²</span></div>
+                  <div class="sensor-status ok" id="status-uv">≥ 40 mW/cm²</div>
                 </div>
-                <div class="sensor-card">
+                <div class="sensor-card" id="card-temp">
                   <div class="sensor-label">TEMPERATURE</div>
-                  <div class="sensor-value" id="sens-temp">24.5 <span class="unit">°C</span></div>
-                  <div class="sensor-status ok">✓ 20 - 30 °C</div>
+                  <div class="sensor-value" id="sens-temp">-- <span class="unit">°C</span></div>
+                  <div class="sensor-status ok" id="status-temp">20 - 30 °C</div>
                 </div>
-                <div class="sensor-card">
+                <div class="sensor-card" id="card-salinity">
                   <div class="sensor-label">SALINITY</div>
-                  <div class="sensor-value" id="sens-salinity">30.0 <span class="unit">PSU</span></div>
-                  <div class="sensor-status ok">✓ 25 - 35 PSU</div>
+                  <div class="sensor-value" id="sens-salinity">-- <span class="unit">PSU</span></div>
+                  <div class="sensor-status ok" id="status-salinity">25 - 35 PSU</div>
                 </div>
-                <div class="sensor-card span-2">
+                <div class="sensor-card span-2" id="card-turb">
                   <div class="sensor-label">TURBIDITY</div>
-                  <div class="sensor-value" id="sens-turb">2.1 <span class="unit">NTU</span></div>
-                  <div class="sensor-status ok">✓ ≤ 5.0 NTU</div>
+                  <div class="sensor-value" id="sens-turb">-- <span class="unit">NTU</span></div>
+                  <div class="sensor-status ok" id="status-turb">≤ 5.0 NTU</div>
                 </div>
               </div>
             </section>
           </div>
 
-          <!-- RIGHT COLUMN: TELEMETRY WINDOW, COMMITMENT & PROOF -->
+          <!-- RIGHT COLUMN: TELEMETRY WINDOW, ROLLING TABLE, COMMITMENT & PROOF -->
           <div class="grid-col right-col">
             
-            <!-- TELEMETRY WINDOW BUILDER & INTEGRITY CHECKS -->
+            <!-- TELEMETRY WINDOW PROGRESS & INTEGRITY -->
             <section class="section-card">
               <div class="section-header">
-                <h2>TELEMETRY WINDOW BUILDER</h2>
-                <span class="section-sub">64-Record Canonical Collection</span>
+                <h2>TELEMETRY WINDOW COLLECTION</h2>
+                <span class="section-sub">64-Record Canonical evidence window</span>
               </div>
 
               <div class="window-progress-bar">
                 <div class="progress-labels">
-                  <span>RECORD COUNTER</span>
+                  <span>INCREMENTAL SAMPLING</span>
                   <span id="win-counter-text" class="mono bold">0 / 64 RECORDS</span>
                 </div>
                 <div class="track">
@@ -181,14 +205,38 @@
                   <span class="chk-icon">⏳</span>
                   <span class="chk-label">Monotonic Timestamp Integrity</span>
                 </div>
-                <div class="check-item" id="chk-op">
+                <div class="check-item" id="chk-compliance">
                   <span class="chk-icon">⏳</span>
-                  <span class="chk-label">Operation Consistency</span>
+                  <span class="chk-label">BWMS-DEMO-V1 Compliance Predicate</span>
                 </div>
-                <div class="check-item" id="chk-win">
-                  <span class="chk-icon">⏳</span>
-                  <span class="chk-label">Window ID Consistency</span>
-                </div>
+              </div>
+            </section>
+
+            <!-- COMPACT LIVE ROLLING TELEMETRY TABLE -->
+            <section class="section-card">
+              <div class="section-header">
+                <h2>LIVE ROLLING TELEMETRY TABLE</h2>
+                <span class="section-sub">Latest Incremental Sensor Readings</span>
+              </div>
+              <div class="rolling-table-container">
+                <table class="telemetry-table">
+                  <thead>
+                    <tr>
+                      <th>SEQ</th>
+                      <th>TIMESTAMP</th>
+                      <th>FLOW</th>
+                      <th>UV</th>
+                      <th>TEMP</th>
+                      <th>SALINITY</th>
+                      <th>TURBIDITY</th>
+                    </tr>
+                  </thead>
+                  <tbody id="telemetry-table-body">
+                    <tr>
+                      <td colspan="7" class="empty-row">Click "START OPERATION" to stream simulated sensor readings.</td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </section>
 
@@ -200,9 +248,9 @@
               </div>
 
               <div class="commitment-box">
-                <div class="c-label">POSEIDON MERKLE ROOT COMMITMENT (PUBLIC INPUT)</div>
+                <div class="c-label">POSEIDON MERKLE ROOT COMMITMENT (SEALED WINDOW PUBLIC INPUT)</div>
                 <div class="c-value-row">
-                  <span id="ship-merkle-root" class="c-value mono">-- (Click START OPERATION)</span>
+                  <span id="ship-merkle-root" class="c-value mono">-- (Available after Record 64 is Sealed)</span>
                   <button id="btn-copy-root" class="btn btn-icon-sm" title="Copy Merkle Root">📋</button>
                 </div>
               </div>
@@ -217,45 +265,14 @@
                   <span class="zk-v mono">Groth16 / BN254 (158,647 R1CS constraints)</span>
                 </div>
                 <div class="zk-row">
-                  <span class="zk-k">Proof Size</span>
-                  <span id="ship-proof-size" class="zk-v mono">-- (approx 805 bytes)</span>
-                </div>
-                <div class="zk-row">
                   <span class="zk-k">Proof Status</span>
-                  <span id="ship-proof-status" class="zk-v badge ready">READY TO GENERATE</span>
+                  <span id="ship-proof-status" class="zk-v badge ready">SEAL WINDOW FIRST</span>
                 </div>
               </div>
 
               <div class="privacy-callout">
                 <span class="callout-icon">🛡️</span>
                 <span>Underlying telemetry records remain strictly local to vessel storage. Only the succinct verification package is prepared for transmit.</span>
-              </div>
-            </section>
-
-            <!-- VSAT LINK TRANSMISSION SIMULATION CARD -->
-            <section class="section-card">
-              <div class="section-header">
-                <h2>VSAT TRANSMISSION SIMULATION</h2>
-                <span class="section-sub">Bandwidth & Payload Optimization</span>
-              </div>
-
-              <div class="vsat-summary-grid">
-                <div class="v-stat">
-                  <span class="v-k">RAW STREAM</span>
-                  <span id="vsat-raw-size" class="v-v mono">14.24 KB</span>
-                </div>
-                <div class="v-stat highlight">
-                  <span class="v-k">ZK PACKAGE</span>
-                  <span id="vsat-zk-size" class="v-v mono">1.10 KB</span>
-                </div>
-                <div class="v-stat accent">
-                  <span class="v-k">SAVINGS</span>
-                  <span id="vsat-savings" class="v-v mono">92.26%</span>
-                </div>
-                <div class="v-stat">
-                  <span class="v-k">VSAT LATENCY</span>
-                  <span id="vsat-rtt" class="v-v mono">650 ms</span>
-                </div>
               </div>
             </section>
 
@@ -298,7 +315,7 @@
                 </div>
                 <div class="info-row">
                   <span class="i-label">Operation / Window</span>
-                  <span id="port-op-win" class="i-val mono">OP-000001 : WIN-000001</span>
+                  <span id="port-op-win" class="i-val mono">--</span>
                 </div>
                 <div class="info-row">
                   <span class="i-label">Circuit Identifier</span>
@@ -574,13 +591,19 @@
                 <span class="section-sub">Classroom Security Demonstration</span>
               </div>
 
+              <div class="note-box" style="margin-bottom: 14px;">
+                🛡️ <strong>ARCHITECTURAL DISTINCTION:</strong> 
+                <br>• <strong>Sensor Scenarios (Ship Console)</strong> generate genuine operational non-compliance (e.g. Low UV).
+                <br>• <strong>Cryptographic Attack Lab (here)</strong> simulates malicious payload tampering (e.g. proof forgery, root mutation).
+              </div>
+
               <div class="attack-selector-group">
                 <label for="lab-attack-select">Select Adversarial Attack Vector</label>
                 <select id="lab-attack-select" class="select-input">
                   <option value="proof_mutation">1. Proof Mutation (Groth16 pi_a Forgery)</option>
                   <option value="root_mutation">2. Merkle Root Mutation (Data Tampering)</option>
                   <option value="unsupported_ruleset">3. Rule-Set Mismatch (Application Metadata)</option>
-                  <option value="stale_package">4. Stale Package Replay Attack (>24h old)</option>
+                  <option value="stale_package">4. Stale Package Replay Attack (&gt;24h old)</option>
                   <option value="replay">5. Duplicate Attestation Replay Attack</option>
                   <option value="operation_mismatch">6. Operation ID Mismatch</option>
                   <option value="window_mismatch">7. Window ID Mismatch</option>

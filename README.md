@@ -96,11 +96,12 @@ The web dashboard is built using a maritime operations & cybersecurity verificat
 
 1. **SHIP ZKP CONSOLE**:
    - Vessel metadata & operation identifiers (`M/V PACIFIC PROSPERITY`, `IMO 9876543`, `OP-000001`, `WIN-000001`).
-   - Live simulated sensor values with status indicators.
-   - Interactive 64-record telemetry window builder (`0/64` $\to$ `64/64`) with 5 integrity checks (Window complete, Sequence integrity, Monotonic timestamp integrity, Operation consistency, Window consistency).
+   - **Stateful Sensor Simulator**: Select from 8 operational scenarios (`NORMAL`, `LOW_UV`, `LOW_FLOW`, `HIGH_TURBIDITY`, `TEMPERATURE_EXCURSION`, `SENSOR_DRIFT`, `OUTLIER`, `MISSING_READING`) driven by a reproducible Mulberry32 PRNG.
+   - **Incremental Sampling & Live Rolling Table**: Telemetry readings stream step-by-step (`1/64` $\to$ `64/64`) via `/api/ship/step` into a live rolling telemetry table with real-time gauge card updates and compliance highlight badges.
+   - **Automatic Window Sealing**: Sealed automatically at record 64 into a canonical Poseidon Merkle tree commitment.
+   - **Fail-Closed ZK Prover**: Non-compliant telemetry or incomplete/corrupted windows immediately block ZK proof generation (`READY TO GENERATE PROOF` vs `NON-COMPLIANT (PROOF BLOCKED)`).
    - Poseidon Merkle root commitment display with copy button.
    - Groth16 proof status & proof size display with privacy warning (*"Underlying telemetry remains local to vessel"*).
-   - VSAT link transmission performance metrics card.
    - Primary Actions: `START OPERATION`, `GENERATE ZK PROOF`, `TRANSMIT TO PORT`.
 
 2. **PORT VERIFICATION CONSOLE**:
